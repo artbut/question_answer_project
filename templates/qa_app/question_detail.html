@@ -1,0 +1,638 @@
+{% extends 'qa_app/base.html' %}
+
+{% block title %}{{ question.title }}{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'qa_app:home' %}">Главная</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'qa_app:question_list' %}">Вопросы</a>
+                    </li>
+                    {% if question.category %}
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'qa_app:category_questions' slug=question.category.slug %}">
+                                {{ question.category.name }}
+                            </a>
+                        </li>
+                    {% endif %}
+                    <li class="breadcrumb-item active">{{ question.title|truncatechars:30 }}</li>
+                </ol>
+            </nav>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0">{{ question.title }}</h2>
+                        {% if user.is_staff and not question.answer %}
+                            <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal"
+                                    data-bs-target="#addAnswerModal">
+                                <i class="fas fa-reply me-1"></i>Добавить ответ
+                            </button>
+                        {% elif user.is_staff and question.answer %}
+                            <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal"
+                                    data-bs-target="#editAnswerModal">
+                                <i class="fas fa-edit me-1"></i>Редактировать ответ
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <p class="card-text">{{ question.content|linebreaks }}</p>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            {% if question.category %}
+                                <a href="{% url 'qa_app:category_questions' slug=question.category.slug %}"
+                                   class="badge bg-secondary text-decoration-none">
+                                    {{ question.category.name }}
+                                </a>
+                            {% endif %}
+
+                            {% for tag in question.get_tags_list %}
+                                <a href="{% url 'qa_app:search_questions' %}?query={{ tag }}&search_in=tags"
+                                   class="badge bg-light text-dark text-decoration-none">
+                                    {{ tag }}
+                                </a>
+                            {% endfor %}
+                        </div>
+
+                        <div class="text-muted">
+                            <small>
+                                Автор:
+                                {% if question.author %}{{ question.author.username }}{% else %}Аноним{% endif %} |
+                                {{ question.created_at|date:"d.m.Y H:i" }} |
+                                👁 {{ question.views }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Файлы вопроса -->
+            {% with files=question.files.all file_type='question' %}
+                {% include 'qa_app/includes/files_section.html' %}
+            {% endwith %}
+
+            {% if question.answer %}
+                <div class="card mb-4 border-success" id="answerSection">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Ответ</h4>
+                        {% if user.is_staff %}
+                            <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal"
+                                    data-bs-target="#editAnswerModal">
+                                <i class="fas fa-edit me-1"></i>Редактировать
+                            </button>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <div class="answer-content">
+                            {{ question.answer|linebreaks }}
+                        </div>
+                        <div class="text-end text-muted mt-3">
+                            <small>Обновлено: <span
+                                    id="answerUpdatedAt">{{ question.updated_at|date:"d.m.Y H:i" }}</span></small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Файлы ответа -->
+                {% with files=question.answer_files.all file_type='answer' %}
+                    {% include 'qa_app/includes/files_section.html' %}
+                {% endwith %}
+
+            {% else %}
+                <div class="alert alert-warning" id="noAnswerAlert">
+                    <h5>Ответ еще не добавлен</h5>
+                    <p class="mb-0">Наш специалист скоро ответит на ваш вопрос.</p>
+                    {% if user.is_staff %}
+                        <button type="button" class="btn btn-sm btn-success mt-2" data-bs-toggle="modal"
+                                data-bs-target="#addAnswerModal">
+                            <i class="fas fa-reply me-1"></i>Добавить ответ
+                        </button>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if similar_questions %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Похожие вопросы</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            {% for similar in similar_questions %}
+                                <a href="{% url 'qa_app:question_detail' pk=similar.pk %}"
+                                   class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ similar.title }}</h6>
+                                        <small>{{ similar.created_at|date:"d.m.Y" }}</small>
+                                    </div>
+                                    {% if similar.has_answer %}
+                                        <span class="badge bg-success">Есть ответ</span>
+                                    {% endif %}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-4">
+            {% include 'qa_app/includes/categories_sidebar.html' %}
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5>Действия</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'qa_app:create_question' %}" class="btn btn-primary w-100 mb-2">
+                        <i class="fas fa-plus me-1"></i>Задать новый вопрос
+                    </a>
+                    <a href="{% url 'qa_app:question_list' %}" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-list me-1"></i>Все вопросы
+                    </a>
+                    {% if user.is_staff %}
+                        <hr>
+                        <button type="button" class="btn btn-success w-100 mb-2" data-bs-toggle="modal"
+                                data-bs-target="{% if question.answer %}#editAnswerModal{% else %}#addAnswerModal{% endif %}">
+                            <i class="fas fa-reply me-1"></i>{% if question.answer %}Редактировать ответ{% else %}
+                            Добавить ответ{% endif %}
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для добавления ответа -->
+    {% if user.is_staff %}
+        <div class="modal fade" id="addAnswerModal" tabindex="-1" aria-labelledby="addAnswerModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title" id="addAnswerModalLabel">
+                            <i class="fas fa-reply me-2"></i>Добавить ответ
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                aria-label="Закрыть"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-4">
+                            <h6>Вопрос:</h6>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6>{{ question.title }}</h6>
+                                    <p class="mb-0 text-muted">{{ question.content|truncatechars:200 }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form id="addAnswerForm">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="answerContent" class="form-label fw-bold">
+                                    Ответ <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control" id="answerContent" name="answer"
+                                          rows="12" placeholder="Введите подробный ответ на вопрос..."
+                                          required></textarea>
+                                <div class="form-text">
+                                    Поддерживается Markdown форматирование. Вы можете использовать:
+                                    <ul class="small mb-0 mt-1">
+                                        <li><code>**жирный текст**</code> для жирного текста</li>
+                                        <li><code>*курсив*</code> для курсива</li>
+                                        <li><code>`код`</code> для встроенного кода</li>
+                                        <li><code>```многострочный код```</code> для блоков кода</li>
+                                        <li><code>- пункты</code> для списков</li>
+                                    </ul>
+                                </div>
+                                <div id="addAnswerError" class="alert alert-danger mt-2 d-none"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="answerAttachments" class="form-label fw-bold">
+                                    <i class="fas fa-paperclip me-1"></i>Прикрепить файлы к ответу
+                                </label>
+                                <input type="file" class="form-control" id="answerAttachments"
+                                       name="attachments" multiple
+                                       accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.zip,.rar,.xls,.xlsx,.ppt,.pptx">
+                                <div class="form-text">
+                                    Можно выбрать несколько файлов (удерживайте Ctrl/Cmd). Максимальный размер каждого
+                                    файла: 10MB
+                                </div>
+                                <div id="filesPreview" class="mt-2"></div>
+                            </div>
+                        </form>
+
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-lightbulb me-2"></i>Советы по написанию ответа:</h6>
+                            <ul class="mb-0">
+                                <li>Будьте максимально подробны и точны</li>
+                                <li>Используйте примеры кода, если это уместно</li>
+                                <li>Ссылайтесь на официальную документацию</li>
+                                <li>Разбейте ответ на логические части для сложных вопросов</li>
+                                <li>Укажите альтернативные решения, если они есть</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i>Отмена
+                        </button>
+                        <button type="button" class="btn btn-success" id="saveAnswerBtn">
+                            <i class="fas fa-save me-1"></i>Сохранить ответ
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно для редактирования ответа -->
+        <div class="modal fade" id="editAnswerModal" tabindex="-1" aria-labelledby="editAnswerModalLabel"
+             aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title" id="editAnswerModalLabel">
+                            <i class="fas fa-edit me-2"></i>Редактировать ответ
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-4">
+                            <h6>Вопрос:</h6>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6>{{ question.title }}</h6>
+                                    <p class="mb-0 text-muted">{{ question.content|truncatechars:200 }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form id="editAnswerForm">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="editAnswerContent" class="form-label fw-bold">
+                                    Ответ <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control" id="editAnswerContent" name="answer"
+                                          rows="12" placeholder="Введите подробный ответ на вопрос..."
+                                          required>{{ question.answer }}</textarea>
+                                <div class="form-text">
+                                    Поддерживается Markdown форматирование.
+                                </div>
+                                <div id="editAnswerError" class="alert alert-danger mt-2 d-none"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="editAnswerAttachments" class="form-label fw-bold">
+                                    <i class="fas fa-paperclip me-1"></i>Добавить дополнительные файлы к ответу
+                                </label>
+                                <input type="file" class="form-control" id="editAnswerAttachments"
+                                       name="attachments" multiple
+                                       accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.zip,.rar,.xls,.xlsx,.ppt,.pptx">
+                                <div class="form-text">
+                                    Можно выбрать несколько файлов (удерживайте Ctrl/Cmd). Максимальный размер каждого
+                                    файла: 10MB
+                                </div>
+                                <div id="editFilesPreview" class="mt-2"></div>
+
+                                <!-- Существующие файлы ответа -->
+                                <!-- В модальном окне редактирования ответа -->
+                                {% if question.answer_files.all %}
+                                    <div class="mt-3">
+                                        <label class="form-label fw-bold">
+                                            <i class="fas fa-files me-1"></i>Существующие файлы ответа:
+                                        </label>
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    {% for file in question.answer_files.all %}
+                                                        <div class="col-md-6 mb-2">
+                                                            <div class="d-flex align-items-center">
+                                                                <i class="{{ file.get_file_icon }} me-2"></i>
+                                                                <div class="flex-grow-1">
+                                                                    <small class="d-block text-truncate"
+                                                                           style="max-width: 200px;">
+                                                                        {{ file.name }}
+                                                                    </small>
+                                                                    <small class="text-muted">{{ file.get_file_size }}</small>
+                                                                </div>
+                                                                <a href="{{ file.file.url }}"
+                                                                   class="btn btn-sm btn-outline-primary btn-sm ms-2"
+                                                                   target="_blank"
+                                                                   download>
+                                                                    <i class="fas fa-download"></i>
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i>Отмена
+                        </button>
+                        {% if question.answer %}
+                            <button type="button" class="btn btn-danger" id="deleteAnswerBtn">
+                                <i class="fas fa-trash me-1"></i>Удалить ответ
+                            </button>
+                        {% endif %}
+                        <button type="button" class="btn btn-warning" id="updateAnswerBtn">
+                            <i class="fas fa-save me-1"></i>Обновить ответ
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- JavaScript для работы с ответами -->
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // Элементы для добавления ответа
+                const addAnswerModal = document.getElementById('addAnswerModal');
+                const addAnswerForm = document.getElementById('addAnswerForm');
+                const answerContent = document.getElementById('answerContent');
+                const answerAttachments = document.getElementById('answerAttachments');
+                const saveAnswerBtn = document.getElementById('saveAnswerBtn');
+                const addAnswerError = document.getElementById('addAnswerError');
+                const filesPreview = document.getElementById('filesPreview');
+
+                // Элементы для редактирования ответа
+                const editAnswerModal = document.getElementById('editAnswerModal');
+                const editAnswerForm = document.getElementById('editAnswerForm');
+                const editAnswerContent = document.getElementById('editAnswerContent');
+                const editAnswerAttachments = document.getElementById('editAnswerAttachments');
+                const updateAnswerBtn = document.getElementById('updateAnswerBtn');
+                const deleteAnswerBtn = document.getElementById('deleteAnswerBtn');
+                const editAnswerError = document.getElementById('editAnswerError');
+                const editFilesPreview = document.getElementById('editFilesPreview');
+
+                // Функция для показа ошибки
+                function showError(errorElement, message) {
+                    errorElement.textContent = message;
+                    errorElement.classList.remove('d-none');
+                    setTimeout(() => {
+                        errorElement.classList.add('d-none');
+                    }, 5000);
+                }
+
+                // Функция для форматирования размера файла
+                function formatFileSize(bytes) {
+                    if (bytes === 0) return '0 B';
+                    const k = 1024;
+                    const sizes = ['B', 'KB', 'MB', 'GB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+                }
+
+                // Функция для показа превью файлов
+                function showFilesPreview(files, previewElement) {
+                    previewElement.innerHTML = '';
+
+                    if (files.length > 0) {
+                        const fileList = document.createElement('div');
+                        fileList.className = 'alert alert-light';
+                        fileList.innerHTML = '<strong>Выбранные файлы:</strong>';
+
+                        const ul = document.createElement('ul');
+                        ul.className = 'mb-0 mt-2';
+
+                        let totalSize = 0;
+                        for (let i = 0; i < files.length; i++) {
+                            const file = files[i];
+                            totalSize += file.size;
+
+                            const li = document.createElement('li');
+                            li.className = 'mb-1';
+                            li.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>${file.name}</span>
+                        <span class="badge bg-secondary">${formatFileSize(file.size)}</span>
+                    </div>
+                `;
+                            ul.appendChild(li);
+                        }
+
+                        fileList.appendChild(ul);
+
+                        // Показываем общий размер
+                        const totalSizeDiv = document.createElement('div');
+                        totalSizeDiv.className = 'mt-2 text-muted';
+                        totalSizeDiv.innerHTML = `<small>Общий размер: ${formatFileSize(totalSize)}</small>`;
+                        fileList.appendChild(totalSizeDiv);
+
+                        previewElement.appendChild(fileList);
+                    }
+                }
+
+                // Обработчики для превью файлов
+                if (answerAttachments) {
+                    answerAttachments.addEventListener('change', function (e) {
+                        showFilesPreview(e.target.files, filesPreview);
+                    });
+                }
+
+                if (editAnswerAttachments) {
+                    editAnswerAttachments.addEventListener('change', function (e) {
+                        showFilesPreview(e.target.files, editFilesPreview);
+                    });
+                }
+
+                // Функция для отправки ответа с файлами
+                function sendAnswerWithFiles(answerText, attachmentsInput, errorElement, isEdit = false) {
+                    const files = attachmentsInput ? attachmentsInput.files : [];
+
+                    if (!answerText.trim()) {
+                        showError(errorElement, 'Ответ не может быть пустым');
+                        return;
+                    }
+
+                    // Проверка размера файлов
+                    for (let i = 0; i < files.length; i++) {
+                        if (files[i].size > 10 * 1024 * 1024) { // 10MB
+                            showError(errorElement,
+                                `Файл "${files[i].name}" слишком большой. Максимальный размер: 10MB`);
+                            return;
+                        }
+                    }
+
+                    // Создаем FormData для отправки файлов
+                    const formData = new FormData();
+                    formData.append('answer', answerText);
+
+                    for (let i = 0; i < files.length; i++) {
+                        formData.append('attachments', files[i]);
+                    }
+
+                    fetch("{% url 'qa_app:add_answer_ajax' pk=question.pk %}", {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: formData
+                    })
+                        .then(response => response.json())
+                        .then(result => {
+                            if (result.success) {
+                                if (isEdit) {
+                                    // Обновляем ответ на странице без перезагрузки
+                                    document.querySelector('.answer-content').innerHTML = result.answer.replace(/\n/g, '<br>');
+                                    document.getElementById('answerUpdatedAt').textContent = result.updated_at;
+
+                                    // Скрываем предупреждение об отсутствии ответа
+                                    const noAnswerAlert = document.getElementById('noAnswerAlert');
+                                    if (noAnswerAlert) {
+                                        noAnswerAlert.classList.add('d-none');
+                                    }
+
+                                    // Показываем блок с ответом
+                                    const answerSection = document.getElementById('answerSection');
+                                    if (answerSection) {
+                                        answerSection.classList.remove('d-none');
+                                    }
+
+                                    // Закрываем модальное окно
+                                    const modal = bootstrap.Modal.getInstance(editAnswerModal);
+                                    modal.hide();
+
+                                    // Показываем уведомление об успехе
+                                    showNotification(result.message || 'Ответ успешно обновлен!', 'success');
+
+                                    // Перезагружаем страницу через 2 секунды для обновления файлов
+                                    setTimeout(() => {
+                                        location.reload();
+                                    }, 2000);
+                                } else {
+                                    // Для нового ответа просто перезагружаем страницу
+                                    location.reload();
+                                }
+                            } else {
+                                throw new Error(result.error || 'Произошла ошибка');
+                            }
+                        })
+                        .catch(error => {
+                            showError(errorElement, error.message);
+                        });
+                }
+
+                // Обработчик сохранения нового ответа
+                if (saveAnswerBtn) {
+                    saveAnswerBtn.addEventListener('click', function () {
+                        sendAnswerWithFiles(
+                            answerContent.value,
+                            answerAttachments,
+                            addAnswerError,
+                            false
+                        );
+                    });
+                }
+
+                // Обработчик обновления ответа
+                if (updateAnswerBtn) {
+                    updateAnswerBtn.addEventListener('click', function () {
+                        sendAnswerWithFiles(
+                            editAnswerContent.value,
+                            editAnswerAttachments,
+                            editAnswerError,
+                            true
+                        );
+                    });
+                }
+
+                // Обработчик удаления ответа
+                if (deleteAnswerBtn) {
+                    deleteAnswerBtn.addEventListener('click', function () {
+                        if (confirm('Вы уверены, что хотите удалить ответ? Это действие нельзя отменить.')) {
+                            // Создаем FormData для отправки пустого ответа
+                            const formData = new FormData();
+                            formData.append('answer', '');
+
+                            fetch("{% url 'qa_app:add_answer_ajax' pk=question.pk %}", {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                                },
+                                body: formData
+                            })
+                                .then(response => response.json())
+                                .then(result => {
+                                    if (result.success) {
+                                        location.reload();
+                                    } else {
+                                        throw new Error(result.error || 'Произошла ошибка');
+                                    }
+                                })
+                                .catch(error => {
+                                    showError(editAnswerError, error.message);
+                                });
+                        }
+                    });
+                }
+
+                // Очистка формы при открытии модального окна добавления ответа
+                if (addAnswerModal) {
+                    addAnswerModal.addEventListener('show.bs.modal', function () {
+                        if (answerContent) answerContent.value = '';
+                        if (answerAttachments) answerAttachments.value = '';
+                        if (filesPreview) filesPreview.innerHTML = '';
+                        if (addAnswerError) addAnswerError.classList.add('d-none');
+                    });
+                }
+
+                // Очистка при открытии модального окна редактирования
+                if (editAnswerModal) {
+                    editAnswerModal.addEventListener('show.bs.modal', function () {
+                        if (editAnswerAttachments) editAnswerAttachments.value = '';
+                        if (editFilesPreview) editFilesPreview.innerHTML = '';
+                        if (editAnswerError) editAnswerError.classList.add('d-none');
+                    });
+                }
+
+                // Функция для показа уведомлений
+                function showNotification(message, type = 'success') {
+                    // Создаем элемент уведомления
+                    const notification = document.createElement('div');
+                    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+                    notification.style.cssText = `
+            top: 20px;
+            right: 20px;
+            z-index: 1055;
+            min-width: 300px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        `;
+
+                    notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+                    // Добавляем на страницу
+                    document.body.appendChild(notification);
+
+                    // Автоматически скрываем через 5 секунд
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.remove();
+                        }
+                    }, 5000);
+                }
+            });
+        </script>
+    {% endif %}
+{% endblock %}

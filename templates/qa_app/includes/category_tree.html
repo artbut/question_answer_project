@@ -1,0 +1,15 @@
+{% if categories %}
+<div class="category-tree">
+    <ul class="list-unstyled">
+        {% for category in categories %}
+            <li class="mb-2">
+                <a href="{{ category.get_absolute_url }}" class="text-decoration-none">
+                    <i class="fas fa-folder me-1"></i>
+                    {{ category.name }}
+                    <span class="badge bg-secondary float-end">{{ category.question_count }}</span>
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}

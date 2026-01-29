@@ -1,0 +1,324 @@
+/* Основные стили */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f8f9fa;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Основной контент */
+.container {
+    flex: 1 0 auto;
+}
+
+/* Навигация */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Карточки */
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: none;
+    margin-bottom: 20px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.card-header {
+    border-bottom: 1px solid rgba(0,0,0,0.125);
+    font-weight: 600;
+}
+
+/* Футер */
+.footer {
+    background: linear-gradient(135deg, #343a40 0%, #212529 100%);
+    color: #fff;
+    padding: 2rem 0;
+    margin-top: auto;
+    width: 100%;
+}
+
+.footer a {
+    color: #adb5bd;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.footer a:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.footer h5 {
+    color: #fff;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.footer ul li {
+    margin-bottom: 0.5rem;
+}
+
+.footer hr {
+    opacity: 0.1;
+    margin: 1.5rem 0;
+}
+
+/* Стили для ответов */
+.answer-content {
+    font-size: 1.1em;
+    line-height: 1.8;
+}
+
+/* Стили для поиска */
+.form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+/* Стили для пагинации */
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+/* Стили для списка вопросов */
+.list-group-item {
+    border-left: 0;
+    border-right: 0;
+    transition: all 0.2s ease;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Стили для тегов */
+.badge {
+    font-weight: 500;
+    padding: 0.5em 0.8em;
+}
+
+/* Модальные окна */
+.modal-content {
+    border: none;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.modal-header {
+    border-bottom: none;
+    padding: 1.5rem;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    border-top: none;
+    padding: 1rem 1.5rem;
+}
+
+/* Уведомления */
+.alert {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Хлебные крошки */
+.breadcrumb {
+    background-color: transparent;
+    padding: 0.75rem 0;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    color: #6c757d;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    h2 {
+        font-size: 1.3rem;
+    }
+
+    .footer .row > div {
+        margin-bottom: 1.5rem;
+    }
+
+    .footer .text-md-end {
+        text-align: left !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .navbar-brand {
+        font-size: 1rem;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card, .alert {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Кастомные скроллбары */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Стили для пустых состояний */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* Градиенты */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+}
+
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #d39e00 100%);
+}
+
+/* Стили для файлов */
+.file-card {
+    border: 1px solid #e9ecef;
+    transition: all 0.2s ease;
+}
+
+.file-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.file-card .fa-file-pdf {
+    color: #dc3545;
+}
+
+.file-card .fa-file-word {
+    color: #2b579a;
+}
+
+.file-card .fa-file-excel {
+    color: #217346;
+}
+
+.file-card .fa-file-powerpoint {
+    color: #d24726;
+}
+
+.file-card .fa-file-image {
+    color: #28a745;
+}
+
+.file-card .fa-file-archive {
+    color: #fd7e14;
+}
+
+.file-card .fa-file-alt {
+    color: #6c757d;
+}
+
+/* Превью файлов */
+#filePreviewList {
+    list-style: none;
+    padding: 0;
+}
+
+#filePreviewList li {
+    background: #f8f9fa;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+}
+
+#filePreviewList li:last-child {
+    margin-bottom: 0;
+}
+
+/* Индикатор загрузки файлов */
+.file-upload-progress {
+    height: 4px;
+    background: #e9ecef;
+    border-radius: 2px;
+    margin-top: 5px;
+    overflow: hidden;
+}
+
+.file-upload-progress-bar {
+    height: 100%;
+    background: #007bff;
+    width: 0%;
+    transition: width 0.3s ease;
+}

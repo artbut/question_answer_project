@@ -1,0 +1,213 @@
+{% extends 'qa_app/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="mb-0">{{ title }}</h2>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="questionForm">
+                    {% csrf_token %}
+
+                    {% for field in form %}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label">
+                                {{ field.label }}
+                                {% if field.field.required %}
+                                    <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <div class="form-text">{{ field.help_text }}</div>
+                            {% endif %}
+                            {% if field.errors %}
+                                <div class="alert alert-danger mt-1">
+                                    {{ field.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+
+                    <!-- Превью выбранных файлов -->
+                    <div class="mb-3" id="filePreviewContainer" style="display: none;">
+                        <label class="form-label">Выбранные файлы:</label>
+                        <div class="card">
+                            <div class="card-body">
+                                <ul id="filePreviewList" class="mb-0"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>Информация о файлах:</h6>
+                        <ul class="mb-0">
+                            <li>Максимальный размер одного файла: 10MB</li>
+                            <li>Разрешенные форматы: PDF, DOC, DOCX, TXT, JPG, PNG, GIF, ZIP, RAR, XLS, XLSX, PPT, PPTX</li>
+                            <li>Можно прикрепить несколько файлов одновременно (удерживайте Ctrl/Cmd)</li>
+                            <li>Файлы будут доступны для скачивания всем пользователям</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'qa_app:question_list' %}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-times me-1"></i>Отмена
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                            <i class="fas fa-paper-plane me-1"></i>Отправить вопрос
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5><i class="fas fa-lightbulb me-2"></i>Советы по формулировке вопроса:</h5>
+                <ul>
+                    <li>Будьте конкретны и четко формулируйте проблему</li>
+                    <li>Опишите, что вы уже пробовали сделать</li>
+                    <li>Укажите версии используемого ПО, если это важно</li>
+                    <li>Используйте теги для облегчения поиска</li>
+                    <li>Прикрепляйте скриншоты или документы, если они помогут понять проблему</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const attachmentsInput = document.querySelector('input[name="attachments"]');
+    const filePreviewContainer = document.getElementById('filePreviewContainer');
+    const filePreviewList = document.getElementById('filePreviewList');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (attachmentsInput) {
+        attachmentsInput.addEventListener('change', function(e) {
+            const files = e.target.files;
+            filePreviewList.innerHTML = '';
+
+            if (files.length > 0) {
+                filePreviewContainer.style.display = 'block';
+
+                let totalSize = 0;
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    totalSize += file.size;
+
+                    const li = document.createElement('li');
+                    li.className = 'mb-2';
+
+                    // Определяем иконку по расширению
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    let iconClass = 'fas fa-file';
+                    let iconColor = 'text-muted';
+
+                    if (['pdf'].includes(ext)) {
+                        iconClass = 'fas fa-file-pdf';
+                        iconColor = 'text-danger';
+                    } else if (['doc', 'docx'].includes(ext)) {
+                        iconClass = 'fas fa-file-word';
+                        iconColor = 'text-primary';
+                    } else if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
+                        iconClass = 'fas fa-file-image';
+                        iconColor = 'text-success';
+                    } else if (['zip', 'rar'].includes(ext)) {
+                        iconClass = 'fas fa-file-archive';
+                        iconColor = 'text-warning';
+                    } else if (['xls', 'xlsx'].includes(ext)) {
+                        iconClass = 'fas fa-file-excel';
+                        iconColor = 'text-success';
+                    } else if (['ppt', 'pptx'].includes(ext)) {
+                        iconClass = 'fas fa-file-powerpoint';
+                        iconColor = 'text-danger';
+                    } else if (ext === 'txt') {
+                        iconClass = 'fas fa-file-alt';
+                        iconColor = 'text-secondary';
+                    }
+
+                    li.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <i class="${iconClass} ${iconColor} me-2"></i>
+                            <span class="flex-grow-1">${file.name}</span>
+                            <span class="badge bg-secondary">${formatFileSize(file.size)}</span>
+                        </div>
+                    `;
+                    filePreviewList.appendChild(li);
+                }
+
+                // Проверка общего размера
+                if (totalSize > 50 * 1024 * 1024) { // 50MB общий лимит
+                    const warning = document.createElement('li');
+                    warning.className = 'alert alert-warning mt-2';
+                    warning.innerHTML = `
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Общий размер файлов (${formatFileSize(totalSize)}) превышает рекомендуемый лимит 50MB.
+                        Рассмотрите возможность сжатия файлов или использования облачного хранилища.
+                    `;
+                    filePreviewList.appendChild(warning);
+                }
+            } else {
+                filePreviewContainer.style.display = 'none';
+            }
+        });
+    }
+
+    // Функция форматирования размера файла
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    // Проверка формы перед отправкой
+    if (submitBtn) {
+        submitBtn.addEventListener('click', function(e) {
+            const attachmentsInput = document.querySelector('input[name="attachments"]');
+            if (attachmentsInput && attachmentsInput.files.length > 0) {
+                let hasOversizedFile = false;
+
+                for (let i = 0; i < attachmentsInput.files.length; i++) {
+                    const file = attachmentsInput.files[i];
+                    if (file.size > 10 * 1024 * 1024) { // 10MB
+                        hasOversizedFile = true;
+                        alert(`Файл "${file.name}" превышает лимит 10MB и не будет загружен.`);
+                    }
+                }
+
+                if (hasOversizedFile) {
+                    if (!confirm('Некоторые файлы превышают лимит 10MB и не будут загружены. Продолжить отправку?')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+            }
+            return true;
+        });
+    }
+});
+</script>
+
+<style>
+#filePreviewList {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+#filePreviewList li {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+#filePreviewList li:last-child {
+    border-bottom: none;
+}
+</style>
+{% endblock %}

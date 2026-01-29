@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.installed.cfg
+.venv/
+*.log
+local_settings.py
+db.sqlite3
+media/
+staticfiles/
+.idea/
+*.swp
+*.swo
+.DS_Store
+docs/
+# Environment variables
+.env
+.env.*
+!.env.example
+.env.example
+
+# Secrets
+secrets/
+keys/

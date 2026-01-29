@@ -1,0 +1,142 @@
+{% extends 'qa_app/base.html' %}
+
+{% block title %}Все вопросы{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h1 class="mb-4">Все вопросы</h1>
+        
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <a href="{% url 'qa_app:question_list' %}" 
+                           class="btn btn-sm {% if not current_category and not answered_filter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            Все
+                        </a>
+                        <a href="?answered=yes" 
+                           class="btn btn-sm {% if answered_filter == 'yes' %}btn-success{% else %}btn-outline-success{% endif %}">
+                            С ответами
+                        </a>
+                        <a href="?answered=no" 
+                           class="btn btn-sm {% if answered_filter == 'no' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                            Без ответов
+                        </a>
+                    </div>
+                    <div>
+                        <small>Сортировать:</small>
+                        <a href="?sort=-created_at{% if answered_filter %}&answered={{ answered_filter }}{% endif %}" 
+                           class="btn btn-sm {% if sort_by == '-created_at' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            Новые
+                        </a>
+                        <a href="?sort=created_at{% if answered_filter %}&answered={{ answered_filter }}{% endif %}" 
+                           class="btn btn-sm {% if sort_by == 'created_at' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            Старые
+                        </a>
+                        <a href="?sort=views{% if answered_filter %}&answered={{ answered_filter }}{% endif %}" 
+                           class="btn btn-sm {% if sort_by == 'views' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                            Популярные
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if questions %}
+            {% for question in questions %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{% url 'qa_app:question_detail' pk=question.pk %}" class="text-decoration-none">
+                                {{ question.title }}
+                            </a>
+                        </h5>
+
+                        <p class="card-text">
+                            {{ question.content|truncatechars:200 }}
+                        </p>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                {% if question.category %}
+                                    <a href="{% url 'qa_app:category_questions' slug=question.category.slug %}"
+                                       class="badge bg-secondary text-decoration-none">
+                                        {{ question.category.name }}
+                                    </a>
+                                {% endif %}
+                                
+                                {% if question.has_answer %}
+                                    <span class="badge bg-success">Есть ответ</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Ожидает ответа</span>
+                                {% endif %}
+                                
+                                {% for tag in question.get_tags_list %}
+                                    <span class="badge bg-light text-dark">{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="text-muted">
+                                <small>
+                                    {{ question.created_at|date:"d.m.Y" }} |
+                                    👁 {{ question.views }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+
+            <!-- Пагинация -->
+            {% if is_paginated %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if answered_filter %}&answered={{ answered_filter }}{% endif %}">
+                                    Назад
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if answered_filter %}&answered={{ answered_filter }}{% endif %}">
+                                        {{ num }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if sort_by %}&sort={{ sort_by }}{% endif %}{% if answered_filter %}&answered={{ answered_filter }}{% endif %}">
+                                    Вперед
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+
+        {% else %}
+            <div class="alert alert-info">
+                Вопросы не найдены.
+                <a href="{% url 'qa_app:create_question' %}" class="alert-link">
+                    Задайте первый вопрос!
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        {% include 'qa_app/includes/categories_sidebar.html' %}
+    </div>
+</div>
+{% endblock %}

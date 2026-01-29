@@ -1,0 +1,65 @@
+{% if files %}
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-paperclip me-2"></i>
+            Прикрепленные файлы {% if file_type == 'question' %}вопроса{% else %}ответа{% endif %} ({{ files|length }})
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for file in files %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card file-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <i class="{{ file.get_file_icon }} fa-2x"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 text-truncate" title="{{ file.name }}">
+                                        {{ file.name|truncatechars:30 }}
+                                    </h6>
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-hdd me-1"></i>{{ file.get_file_size }}
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="far fa-clock me-1"></i>{{ file.uploaded_at|date:"d.m.Y H:i" }}
+                                    </small>
+                                    {% if file_type == 'answer' and file.uploaded_by %}
+                                        <small class="text-muted d-block">
+                                            <i class="fas fa-user me-1"></i>{{ file.uploaded_by.username }}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-top-0 pt-0">
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ file.file.url }}"
+                                   class="btn btn-sm btn-outline-primary"
+                                   target="_blank"
+                                   download>
+                                    <i class="fas fa-download me-1"></i>Скачать
+                                </a>
+
+                                {% if file_type == 'question' and user == file.question.author or file_type == 'answer' and user == file.uploaded_by or user.is_staff %}
+                                    <form method="post"
+                                          action="{% url 'qa_app:delete_file' file_type=file_type file_id=file.id %}"
+                                          class="delete-file-form"
+                                          onsubmit="return confirm('Вы уверены, что хотите удалить этот файл?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}

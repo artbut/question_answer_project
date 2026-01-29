@@ -1,0 +1,102 @@
+{% extends 'qa_app/base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h1 class="mb-4">Вопросы и ответы</h1>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Поиск по вопросам</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'qa_app:search_questions' %}">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="query" 
+                               placeholder="Введите поисковый запрос...">
+                        <button class="btn btn-primary" type="submit">Искать</button>
+                    </div>
+                    <div class="mt-2">
+                        <small>Искать в:</small>
+                        {% for choice in form.search_in %}
+                            <div class="form-check form-check-inline">
+                                {{ choice.tag }}
+                                <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                    {{ choice.choice_label }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5>Последние вопросы</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_questions %}
+                            <div class="list-group">
+                                {% for question in recent_questions %}
+                                    <a href="{% url 'qa_app:question_detail' pk=question.pk %}"
+                                       class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">{{ question.title|truncatechars:50 }}</h6>
+                                            <small>{{ question.created_at|date:"d.m.Y" }}</small>
+                                        </div>
+                                        {% if question.category %}
+                                            <span class="badge bg-secondary">
+                                                {{ question.category.name }}
+                                            </span>
+                                        {% endif %}
+                                        {% if question.has_answer %}
+                                            <span class="badge bg-success">Есть ответ</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Без ответа</span>
+                                        {% endif %}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">Вопросов пока нет</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5>Отвеченные вопросы</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if answered_questions %}
+                            <div class="list-group">
+                                {% for question in answered_questions %}
+                                    <a href="{% url 'qa_app:question_detail' pk=question.pk %}"
+                                       class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">{{ question.title|truncatechars:50 }}</h6>
+                                            <small>{{ question.created_at|date:"d.m.Y" }}</small>
+                                        </div>
+                                        <p class="mb-1">{{ question.answer|truncatechars:100 }}</p>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">Нет отвеченных вопросов</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        {% include 'qa_app/includes/categories_sidebar.html' %}
+    </div>
+</div>
+{% endblock %}
