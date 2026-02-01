@@ -236,6 +236,9 @@ class Task(models.Model):
     def __str__(self):
         return self.title
 
+    def get_content_type(self):
+        return ContentType.objects.get_for_model(self)
+
     def get_absolute_url(self):
         return reverse('qa_app:task_detail', kwargs={'pk': self.pk})
 
