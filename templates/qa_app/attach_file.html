@@ -1,0 +1,69 @@
+{% extends 'qa_app/base.html' %}
+{% load static %}
+{% load html_filters %}
+
+{% block title %}Прикрепить файл{% endblock %}
+
+{% block content %}
+    <div class="card">
+        <div class="card-header">
+            <h4>
+                <i class="fas fa-paperclip me-2 text-primary"></i>
+                {% if task_pk %}
+                    Прикрепление файла к задаче
+                {% elif note_pk %}
+                    Прикрепление файла к записи
+                {% endif %}
+            </h4>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data" class="row g-3">
+                {% csrf_token %}
+
+                <!-- Файл -->
+                <div class="col-12">
+                    <label for="{{ form.file.id_for_label }}" class="form-label fw-bold">
+                        Выберите файл
+                    </label>
+                    {{ form.file }}
+                    {% if form.file.errors %}
+                        <div class="text-danger mt-1">{{ form.file.errors }}</div>
+                    {% endif %}
+                    <div class="form-text">
+                        Поддерживаются: PDF, DOCX, XLSX, ZIP, изображения и др. Макс. 10MB.
+                    </div>
+                </div>
+
+                <!-- Название файла (опционально) -->
+                <div class="col-12">
+                    <label for="{{ form.name.id_for_label }}" class="form-label fw-bold">
+                        Название файла (необязательно)
+                    </label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                        <div class="text-danger mt-1">{{ form.name.errors }}</div>
+                    {% endif %}
+                    <div class="form-text">
+                        Если не указать — будет использовано оригинальное имя.
+                    </div>
+                </div>
+
+                <!-- Кнопки -->
+                <div class="col-12 mt-4">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fas fa-upload me-1"></i> Прикрепить файл
+                    </button>
+                    {% if task_pk %}
+                        <a href="{% url 'qa_app:task_detail' pk=task_pk %}" class="btn btn-secondary ms-2">
+                            <i class="fas fa-times me-1"></i> Отмена
+                        </a>
+                    {% else %}
+                        <a href="{% url 'qa_app:task_list' %}" class="btn btn-secondary ms-2">
+                            <i class="fas fa-times me-1"></i> Отмена
+                        </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

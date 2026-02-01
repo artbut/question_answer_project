@@ -1,6 +1,6 @@
 from django import forms
+from django.contrib.auth.forms import AuthenticationForm
 from django.utils.html import strip_tags
-
 from .models import Question, Category, Tag, AttachedFile
 from django.core.exceptions import ValidationError
 import os
@@ -208,7 +208,7 @@ class SearchForm(forms.Form):
 # Форма входа (кастомная)
 # ----------------------------
 
-class LoginForm(forms.Form):
+class LoginForm(AuthenticationForm):
     username = forms.CharField(
         label='Имя пользователя',
         widget=forms.TextInput(attrs={
@@ -226,16 +226,9 @@ class LoginForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-        username = cleaned_data.get('username')
-        password = cleaned_data.get('password')
+        user = self.get_user()
 
-        if username and password:
-            # Проверим, существует ли пользователь
-            from django.contrib.auth import authenticate
-            user = authenticate(username=username, password=password)
-            if user is None:
-                raise ValidationError('Неверное имя пользователя или пароль.')
-            elif not user.is_active:
-                raise ValidationError('Аккаунт отключен.')
+        if user is not None and not user.is_active:
+            raise ValidationError('Аккаунт отключен.')
 
         return cleaned_data

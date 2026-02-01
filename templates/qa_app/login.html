@@ -2,6 +2,10 @@
 
 {% block title %}Вход в систему{% endblock %}
 
+{% block sidebar %}
+    <!-- Пустой блок: скрываем сайдбар на странице входа -->
+{% endblock %}
+
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6 col-lg-5">
@@ -34,20 +38,32 @@
                 <form method="post" action="{% url 'qa_app:login' %}">
                     {% csrf_token %}
 
+                    <!-- Поле username -->
                     <div class="mb-3">
-                        <label for="id_username" class="form-label">
-                            <i class="fas fa-user me-1"></i>Имя пользователя
-                        </label>
-                        <input type="text" name="username" class="form-control"
-                               id="id_username" required>
+                        {{ form.username.label_tag }}
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-user"></i>
+                            </span>
+                            {{ form.username }}
+                        </div>
+                        {% if form.username.errors %}
+                            <div class="text-danger mt-1 small">{{ form.username.errors }}</div>
+                        {% endif %}
                     </div>
 
+                    <!-- Поле password -->
                     <div class="mb-4">
-                        <label for="id_password" class="form-label">
-                            <i class="fas fa-lock me-1"></i>Пароль
-                        </label>
-                        <input type="password" name="password" class="form-control"
-                               id="id_password" required>
+                        {{ form.password.label_tag }}
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-lock"></i>
+                            </span>
+                            {{ form.password }}
+                        </div>
+                        {% if form.password.errors %}
+                            <div class="text-danger mt-1 small">{{ form.password.errors }}</div>
+                        {% endif %}
                     </div>
 
                     <input type="hidden" name="next" value="{{ next }}">

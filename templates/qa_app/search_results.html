@@ -3,24 +3,173 @@
 
 {% block title %}Результаты поиска{% endblock %}
 
+{% block extra_head %}
+<style>
+/* Стили для страницы поиска */
+.search-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.search-stats {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.search-stats .icon {
+    font-size: 2.5rem;
+    opacity: 0.8;
+    margin-right: 1rem;
+}
+
+.search-filters {
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid #dee2e6;
+}
+
+.search-filters .form-check-label {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.search-filters .form-check-label:hover {
+    color: #0d6efd;
+}
+
+.result-card {
+    border-left: 4px solid transparent;
+    transition: all 0.2s;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.result-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    border-left-color: #0d6efd;
+}
+
+.result-card .card-body {
+    padding: 1.5rem;
+}
+
+.highlight {
+    background-color: #fff3cd;
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+    font-weight: 500;
+}
+
+.no-results {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.no-results i {
+    font-size: 4rem;
+    color: #adb5bd;
+    margin-bottom: 1rem;
+}
+
+.no-results h4 {
+    color: #495057;
+    margin-bottom: 1rem;
+}
+
+.suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.suggestion-item {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.suggestion-item:hover {
+    background-color: #e9ecef;
+    transform: translateY(-1px);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .search-stats {
+        text-align: center;
+    }
+
+    .search-stats .icon {
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+
+    .result-card .card-title {
+        font-size: 1.1rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row">
     <div class="col-lg-8">
-        <h1 class="mb-4">Результаты поиска</h1>
+        <!-- Заголовок -->
+        <div class="search-header">
+            <h1><i class="fas fa-search me-2 text-primary"></i>Поиск</h1>
+
+            <!-- Статистика поиска -->
+            {% if query %}
+            <div class="search-stats d-flex align-items-center">
+                <i class="fas fa-search icon"></i>
+                <div>
+                    <h3 class="mb-0">Найдено {{ page_obj.paginator.count }} результатов</h3>
+                    <p class="mb-0 opacity-75">
+                        По запросу "<strong>{{ query }}</strong>"
+                        {% if search_in != 'all' %}
+                            {% if search_in == 'title' %}в заголовках{% endif %}
+                            {% if search_in == 'content' %}в содержании{% endif %}
+                            {% if search_in == 'tags' %}в тегах{% endif %}
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
 
         <!-- Форма поиска -->
-        <div class="card mb-4">
+        <div class="search-filters card">
             <div class="card-body">
                 <form method="get" action="{% url 'qa_app:search_questions' %}">
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="query"
-                               value="{{ query }}" placeholder="Что ищем?">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text"
+                               class="form-control border-start-0 ps-0"
+                               name="query"
+                               value="{{ query }}"
+                               placeholder="Введите поисковый запрос..."
+                               autofocus>
                         <button class="btn btn-primary" type="submit">
-                            <i class="fas fa-search"></i> Искать
+                            <i class="fas fa-search me-1"></i>Искать
                         </button>
                     </div>
-                    <div class="mt-3">
-                        <small class="me-2">Искать в:</small>
+
+                    <div class="mb-3">
+                        <small class="text-muted me-2">Искать в:</small>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="radio" name="search_in"
                                    value="all" id="search_all" {% if search_in == 'all' %}checked{% endif %}>
@@ -42,54 +191,84 @@
                             <label class="form-check-label" for="search_tags">Тегах</label>
                         </div>
                     </div>
-                </form>
 
-                {% if query %}
-                    <div class="mt-3">
-                        <p class="mb-0">
-                            Найдено: <strong>{{ page_obj.paginator.count }}</strong> вопросов
-                            {% if search_in != 'all' %}
-                                (в {{ search_in }})
-                            {% endif %}
-                        </p>
+                    <!-- Подсказки -->
+                    {% if query %}
+                    <div class="alert alert-light border mb-0">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-lightbulb me-2 text-warning"></i>
+                            <strong>Советы по поиску:</strong>
+                        </div>
+                        <div class="suggestions">
+                            <span class="suggestion-item">
+                                <i class="fas fa-quote-left me-1"></i>"точная фраза"
+                            </span>
+                            <span class="suggestion-item">
+                                <i class="fas fa-plus me-1"></i>+обязательное слово
+                            </span>
+                            <span class="suggestion-item">
+                                <i class="fas fa-minus me-1"></i>-исключить слово
+                            </span>
+                        </div>
                     </div>
-                {% endif %}
+                    {% endif %}
+                </form>
             </div>
         </div>
 
-        <!-- Результаты -->
+        <!-- Результаты поиска -->
         {% if page_obj.object_list %}
             {% for question in page_obj.object_list %}
-                <div class="card mb-3">
+                <div class="card result-card mb-4">
                     <div class="card-body">
-                        <h5 class="card-title">
+                        <!-- Заголовок вопроса -->
+                        <h5 class="card-title mb-3">
                             <a href="{% url 'qa_app:question_detail' pk=question.pk %}"
-                               class="text-decoration-none">
-                                {{ question.title }}
+                               class="text-decoration-none text-dark">
+                                {{ question.title|highlight_search:query }}
                             </a>
                         </h5>
 
-                        <p class="card-text text-muted">
-                            {{ question.content|striptags|truncatechars:250 }}
+                        <!-- Краткое содержание -->
+                        <p class="card-text text-muted mb-3">
+                            {{ question.content|striptags|truncatewords_html:40|highlight_search:query }}
                         </p>
 
-                        {% if query and query|lower in question.answer|lower %}
-                            <div class="alert alert-info py-2">
-                                <strong>Найдено в ответе:</strong>
-                                {{ question.answer|striptags|truncatechars:150 }}
+                        <!-- Упоминание в ответе -->
+                        {% if query and question.answer and query|lower in question.answer|lower %}
+                            <div class="alert alert-info py-2 px-3 mb-3">
+                                <i class="fas fa-comment-dots me-2"></i>
+                                <strong>Упоминается в ответе:</strong>
+                                {{ question.answer|striptags|truncatewords_html:20|highlight_search:query }}
                             </div>
                         {% endif %}
 
+                        <!-- Метаданные -->
                         <div class="d-flex justify-content-between align-items-center">
-                            <div>
+                            <div class="d-flex flex-wrap gap-2">
                                 {% if question.category %}
-                                    <span class="badge bg-secondary">{{ question.category.name }}</span>
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-folder me-1"></i>{{ question.category.name }}
+                                    </span>
                                 {% endif %}
+
                                 {% if question.has_answer %}
-                                    <span class="badge bg-success">Ответ есть</span>
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle me-1"></i>Ответ есть
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-clock me-1"></i>Ожидает
+                                    </span>
                                 {% endif %}
+
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-eye me-1"></i>{{ question.views }}
+                                </span>
                             </div>
+
                             <div class="text-muted small">
+                                <i class="fas fa-calendar-alt me-1"></i>
                                 {{ question.created_at|date:"d.m.Y" }}
                             </div>
                         </div>
@@ -99,26 +278,26 @@
 
             <!-- Пагинация -->
             {% if page_obj.has_other_pages %}
-                <nav aria-label="Навигация по страницам">
+                <nav aria-label="Навигация по страницам" class="mt-5">
                     <ul class="pagination justify-content-center">
                         {% if page_obj.has_previous %}
                             <li class="page-item">
                                 <a class="page-link"
-                                   href="?query={{ query }}&search_in={{ search_in }}&page={{ page_obj.previous_page_number }}">
-                                    Назад
+                                   href="?query={{ query|urlencode }}&search_in={{ search_in }}&page={{ page_obj.previous_page_number }}">
+                                    <i class="fas fa-angle-left me-1"></i>Назад
                                 </a>
                             </li>
                         {% endif %}
 
                         {% for num in page_obj.paginator.page_range %}
                             {% if page_obj.number == num %}
-                                <li class="page-item active">
+                                <li class="page-item active" aria-current="page">
                                     <span class="page-link">{{ num }}</span>
                                 </li>
                             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
                                 <li class="page-item">
                                     <a class="page-link"
-                                       href="?query={{ query }}&search_in={{ search_in }}&page={{ num }}">
+                                       href="?query={{ query|urlencode }}&search_in={{ search_in }}&page={{ num }}">
                                         {{ num }}
                                     </a>
                                 </li>
@@ -128,8 +307,8 @@
                         {% if page_obj.has_next %}
                             <li class="page-item">
                                 <a class="page-link"
-                                   href="?query={{ query }}&search_in={{ search_in }}&page={{ page_obj.next_page_number }}">
-                                    Вперед
+                                   href="?query={{ query|urlencode }}&search_in={{ search_in }}&page={{ page_obj.next_page_number }}">
+                                    Вперед<i class="fas fa-angle-right ms-1"></i>
                                 </a>
                             </li>
                         {% endif %}
@@ -138,15 +317,25 @@
             {% endif %}
 
         {% elif query %}
-            <div class="alert alert-warning">
-                <h5><i class="fas fa-search me-2"></i>Ничего не найдено</h5>
-                <p>Попробуйте:</p>
-                <ul>
-                    <li>Изменить поисковый запрос</li>
-                    <li>Использовать другие ключевые слова</li>
-                    <li>Проверить правильность написания</li>
-                    <li>Искать в другой категории</li>
-                </ul>
+            <div class="no-results">
+                <i class="fas fa-search-minus"></i>
+                <h4>Ничего не найдено</h4>
+                <p class="text-muted">По вашему запросу "{{ query }}" ничего не найдено.</p>
+
+                <div class="d-flex flex-wrap justify-content-center gap-3 mt-4">
+                    <a href="{% url 'qa_app:create_question' %}" class="btn btn-primary">
+                        <i class="fas fa-question-circle me-1"></i>Задать вопрос
+                    </a>
+                    <a href="{% url 'qa_app:question_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-list me-1"></i>Просмотреть все вопросы
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                <h4>Введите поисковый запрос</h4>
+                <p class="text-muted">Чтобы найти нужную информацию, введите текст в поле выше.</p>
             </div>
         {% endif %}
     </div>
@@ -154,6 +343,142 @@
     <!-- Сайдбар -->
     <div class="col-lg-4">
         {% include 'qa_app/includes/categories_sidebar.html' %}
+
+        <!-- Популярные запросы -->
+        {% if popular_searches %}
+        <div class="card mt-4">
+            <div class="card-header bg-dark text-white">
+                <h6 class="mb-0"><i class="fas fa-fire me-2"></i>Популярные запросы</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% for search_term in popular_searches %}
+                    <a href="{% url 'qa_app:search_questions' %}?query={{ search_term.term|urlencode }}"
+                       class="badge bg-light text-dark text-decoration-none"
+                       style="font-size: 0.85em; padding: 0.5em 0.8em;">
+                        {{ search_term.term }}
+                        <small class="text-muted">({{ search_term.count }})</small>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Быстрые действия -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-cog me-2"></i>Действия</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'qa_app:create_question' %}" class="btn btn-primary">
+                        <i class="fas fa-plus-circle me-1"></i>Задать вопрос
+                    </a>
+                    <a href="{% url 'qa_app:task_list' %}" class="btn btn-outline-info">
+                        <i class="fas fa-tasks me-1"></i>Перейти к задачам
+                    </a>
+                    <a href="{% url 'qa_app:home' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-home me-1"></i>На главную
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Подсветка поискового запроса в результатах
+    function highlightSearchText(text, query) {
+        if (!query || !text) return text;
+
+        const regex = new RegExp('(' + escapeRegExp(query) + ')', 'gi');
+        return text.replace(regex, '<mark class="highlight">$1</mark>');
+    }
+
+    // Экранирование специальных символов для регулярного выражения
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // Применение подсветки к элементам с атрибутом data-highlight
+    document.querySelectorAll('[data-highlight]').forEach(element => {
+        const text = element.textContent;
+        const query = element.getAttribute('data-highlight');
+        element.innerHTML = highlightSearchText(text, query);
+    });
+
+    // Автофокус на поле поиска при открытии страницы
+    const searchInput = document.querySelector('input[name="query"]');
+    if (searchInput && !searchInput.value) {
+        searchInput.focus();
+    }
+
+    // Сохранение последнего поискового запроса
+    if (searchInput && searchInput.value) {
+        try {
+            localStorage.setItem('last_search_query', searchInput.value);
+        } catch (e) {
+            console.log('Не удалось сохранить последний поисковый запрос');
+        }
+    }
+
+    // История поиска (последние 5 запросов)
+    function updateSearchHistory() {
+        try {
+            const history = JSON.parse(localStorage.getItem('search_history') || '[]');
+            const query = searchInput?.value.trim();
+
+            if (query && history.indexOf(query) === -1) {
+                history.unshift(query);
+                if (history.length > 5) {
+                    history.pop();
+                }
+                localStorage.setItem('search_history', JSON.stringify(history));
+            }
+        } catch (e) {
+            console.log('Не удалось обновить историю поиска');
+        }
+    }
+
+    // Обработка отправки формы
+    const searchForm = document.querySelector('form[action*="search"]');
+    if (searchForm) {
+        searchForm.addEventListener('submit', function(e) {
+            const query = searchInput?.value.trim();
+            if (!query) {
+                e.preventDefault();
+                searchInput?.focus();
+                return;
+            }
+            updateSearchHistory();
+        });
+    }
+
+    // Анимация карточек при загрузке
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.result-card').forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(10px)';
+        card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        setTimeout(() => observer.observe(card), 100 * Math.random());
+    });
+});
+</script>
 {% endblock %}

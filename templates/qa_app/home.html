@@ -1,7 +1,11 @@
 {% extends 'qa_app/base.html' %}
 {% load html_filters %}
 
-{% block title %}Главная - Вопросы и Ответы{% endblock %}
+{% block title %}Главная - Вопросы и Задачи{% endblock %}
+
+{% block sidebar_class %}col-lg-12{% endblock %}
+
+{% block sidebar_content %}{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -10,30 +14,28 @@
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 15px;
     color: white;
-    padding: 4rem 2rem;
-    margin-bottom: 3rem;
+    padding: 3rem 1.5rem;
+    margin-bottom: 2.5rem;
     text-align: center;
 }
 
 .hero-section h1 {
-    font-size: 2.8rem;
+    font-size: 2.5rem;
     font-weight: 700;
     margin-bottom: 1rem;
     text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .hero-section p {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     opacity: 0.9;
     max-width: 600px;
-    margin: 0 auto 2rem;
+    margin: 0 auto 1.5rem;
 }
 
-.hero-buttons {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    flex-wrap: wrap;
+.hero-buttons .btn {
+    font-size: 1rem;
+    padding: 0.6rem 1.5rem;
 }
 
 .stat-card {
@@ -45,23 +47,23 @@
 }
 
 .stat-card:hover {
-    transform: translateY(-3px);
+    transform: translateY(-2px);
 }
 
 .stat-card .card-body {
     text-align: center;
-    padding: 1.5rem;
+    padding: 1.2rem;
 }
 
 .stat-number {
-    font-size: 2.5rem;
+    font-size: 2rem;
     font-weight: 700;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.4rem;
     color: #212529;
 }
 
 .stat-label {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: #6c757d;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -73,6 +75,10 @@
     overflow: hidden;
     transition: all 0.3s;
     height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 300px;
+    max-height: 400px;
 }
 
 .feature-card:hover {
@@ -84,37 +90,51 @@
     background-color: #f8f9fa;
     border-bottom: 1px solid #e9ecef;
     font-weight: 600;
+    padding: 0.75rem 1rem;
+    flex-shrink: 0;
+}
+
+.feature-card .card-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.feature-card .list-group {
+    max-height: 320px;
+    overflow-y: auto;
 }
 
 .quick-links {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.8rem;
 }
 
 .quick-link-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 1.5rem 1rem;
+    padding: 1.2rem 0.8rem;
     background: white;
     border: 1px solid #e9ecef;
-    border-radius: 10px;
+    border-radius: 8px;
     text-decoration: none;
     color: #495057;
     transition: all 0.2s;
+    font-size: 0.9rem;
 }
 
 .quick-link-item:hover {
     border-color: #0d6efd;
     color: #0d6efd;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
 }
 
 .quick-link-item i {
-    font-size: 2rem;
-    margin-bottom: 1rem;
+    font-size: 1.8rem;
+    margin-bottom: 0.8rem;
     color: #6c757d;
 }
 
@@ -122,56 +142,152 @@
     color: #0d6efd;
 }
 
-.question-preview {
+.item-preview {
     border-left: 3px solid transparent;
-    padding-left: 1rem;
+    padding: 0.75rem 1rem;
     transition: all 0.2s;
+    border-bottom: 1px solid #f1f3f5;
 }
 
-.question-preview:hover {
+.item-preview:hover {
     border-left-color: #0d6efd;
     background-color: #f8f9fa;
 }
 
-.question-preview-title {
+.item-preview:last-child {
+    border-bottom: none;
+}
+
+.item-title {
     font-weight: 600;
     margin-bottom: 0.25rem;
     color: #212529;
+    font-size: 0.95rem;
+    line-height: 1.3;
 }
 
-.question-preview-meta {
-    font-size: 0.85rem;
+.item-meta {
+    font-size: 0.8rem;
     color: #6c757d;
+    line-height: 1.4;
 }
 
 .empty-state {
     text-align: center;
-    padding: 3rem 1rem;
+    padding: 2rem 1rem;
     color: #6c757d;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
 }
 
 .empty-state i {
-    font-size: 3rem;
+    font-size: 2.5rem;
     margin-bottom: 1rem;
     opacity: 0.5;
 }
 
-@media (max-width: 768px) {
+.empty-state h4 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.call-to-action {
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 0 !important;
+}
+
+.call-to-action .btn {
+    font-size: 1.1rem;
+    padding: 0.7rem 1.8rem;
+}
+
+/* Стили для скроллбара */
+.feature-card .list-group::-webkit-scrollbar {
+    width: 6px;
+}
+
+.feature-card .list-group::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.feature-card .list-group::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.feature-card .list-group::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Адаптивность */
+@media (max-width: 992px) {
     .hero-section {
-        padding: 2rem 1rem;
+        padding: 2.5rem 1rem;
     }
 
     .hero-section h1 {
-        font-size: 2rem;
+        font-size: 2.2rem;
     }
 
-    .hero-buttons {
-        flex-direction: column;
+    .stat-number {
+        font-size: 1.8rem;
     }
 
-    .hero-buttons .btn {
-        width: 100%;
+    .quick-link-item {
+        padding: 1rem 0.6rem;
+        font-size: 0.85rem;
     }
+
+    .quick-link-item i {
+        font-size: 1.6rem;
+    }
+
+    .feature-card {
+        max-height: 350px;
+    }
+
+    .feature-card .list-group {
+        max-height: 280px;
+    }
+}
+
+@media (max-width: 768px) {
+    .feature-card {
+        max-height: 320px;
+    }
+
+    .feature-card .list-group {
+        max-height: 250px;
+    }
+}
+
+/* Исправление для длинных текстов */
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Улучшенные отступы */
+.list-group-flush .list-group-item {
+    padding: 0.75rem 1rem;
+}
+
+/* Ограничение количества элементов */
+.limit-items-5 .list-group-item:nth-child(n+6) {
+    display: none;
+}
+
+.show-more-btn {
+    margin-top: 10px;
+    font-size: 0.85rem;
 }
 </style>
 {% endblock %}
@@ -179,78 +295,74 @@
 {% block content %}
 <!-- Герой-секция -->
 <div class="hero-section">
-    <h1>Найдите ответы на свои вопросы</h1>
-    <p>Сообщество экспертов готово помочь вам решить любые технические вопросы. Задавайте вопросы, делитесь знаниями и находите решения вместе.</p>
+    <h1>Управление знаниями и задачами</h1>
+    <p>Система для хранения вопросов, ответов и рабочих инструкций. Создавайте задачи, добавляйте записи и файлы.</p>
 
     <div class="hero-buttons">
-        <a href="{% url 'qa_app:create_question' %}" class="btn btn-light btn-lg px-4">
-            <i class="fas fa-plus-circle me-2"></i>Задать вопрос
+        <a href="{% url 'qa_app:create_question' %}" class="btn btn-light">
+            <i class="fas fa-question-circle me-2"></i>Задать вопрос
         </a>
-        <a href="{% url 'qa_app:question_list' %}" class="btn btn-outline-light btn-lg px-4">
-            <i class="fas fa-search me-2"></i>Найти ответы
+        <a href="{% url 'qa_app:task_create' %}" class="btn btn-outline-light">
+            <i class="fas fa-tasks me-2"></i>Создать задачу
         </a>
     </div>
 </div>
 
 <!-- Быстрые ссылки -->
-<div class="row mb-5">
-    <div class="col-12">
-        <h2 class="mb-4">Быстрый доступ</h2>
-        <div class="quick-links">
-            <a href="{% url 'qa_app:question_list' %}" class="quick-link-item">
-                <i class="fas fa-question-circle"></i>
-                <span>Все вопросы</span>
-            </a>
-            <a href="{% url 'qa_app:question_list' %}?answered=yes" class="quick-link-item">
-                <i class="fas fa-check-circle"></i>
-                <span>С ответами</span>
-            </a>
-            <a href="{% url 'qa_app:question_list' %}?answered=no" class="quick-link-item">
-                <i class="fas fa-clock"></i>
-                <span>Без ответов</span>
-            </a>
-            <a href="{% url 'qa_app:create_question' %}" class="quick-link-item">
-                <i class="fas fa-plus-circle"></i>
-                <span>Новый вопрос</span>
-            </a>
+<div class="mb-4">
+    <h2 class="mb-3">Быстрый доступ</h2>
+    <div class="quick-links">
+        <a href="{% url 'qa_app:question_list' %}" class="quick-link-item">
+            <i class="fas fa-question-circle"></i>
+            <span>Вопросы</span>
+        </a>
+        <a href="{% url 'qa_app:task_list' %}" class="quick-link-item">
+            <i class="fas fa-tasks"></i>
+            <span>Задачи</span>
+        </a>
+        <a href="{% url 'qa_app:question_list' %}?answered=yes" class="quick-link-item">
+            <i class="fas fa-check-circle"></i>
+            <span>С ответами</span>
+        </a>
+        <a href="{% url 'qa_app:task_list' %}" class="quick-link-item">
+            <i class="fas fa-sticky-note"></i>
+            <span>Инструкции</span>
+        </a>
+    </div>
+</div>
+
+<!-- Статистика -->
+<div class="row mb-4">
+    <div class="col-md-4 col-sm-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-number">{{ question_count|default:0 }}</div>
+                <div class="stat-label">Вопросов</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-sm-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-number">{{ sidebar_total_tasks|default:0 }}</div>
+                <div class="stat-label">Задач</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-sm-6 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="stat-number">{{ categories|length|default:0 }}</div>
+                <div class="stat-label">Категорий</div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Основной контент -->
-<div class="row g-4">
-    <!-- Левая колонка: Статистика и последние вопросы -->
-    <div class="col-lg-8">
-        <!-- Статистика -->
-        <div class="row mb-5">
-            <div class="col-md-4 mb-3">
-                <div class="card stat-card">
-                    <div class="card-body">
-                        <div class="stat-number">{{ question_count|default:0 }}</div>
-                        <div class="stat-label">Всего вопросов</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card stat-card">
-                    <div class="card-body">
-                        <div class="stat-number">{{ answered_count|default:0 }}</div>
-                        <div class="stat-label">С ответами</div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 mb-3">
-                <div class="card stat-card">
-                    <div class="card-body">
-                        <div class="stat-number">{{ categories|length|default:0 }}</div>
-                        <div class="stat-label">Категорий</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Последние вопросы -->
-        <div class="card feature-card mb-4">
+<div class="row">
+    <!-- Последние вопросы -->
+    <div class="col-lg-6 mb-4">
+        <div class="card feature-card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="fas fa-clock me-2"></i>Последние вопросы</span>
                 <a href="{% url 'qa_app:question_list' %}" class="btn btn-sm btn-outline-primary">
@@ -260,36 +372,31 @@
             <div class="card-body">
                 {% if recent_questions %}
                     <div class="list-group list-group-flush">
-                        {% for question in recent_questions %}
+                        {% for question in recent_questions|slice:":8" %}
                             <a href="{% url 'qa_app:question_detail' pk=question.pk %}"
-                               class="list-group-item list-group-item-action border-0 question-preview">
+                               class="list-group-item list-group-item-action item-preview">
                                 <div class="d-flex justify-content-between align-items-start">
-                                    <div class="flex-grow-1">
-                                        <div class="question-preview-title">
-                                            {{ question.title|truncatechars:60 }}
+                                    <div class="flex-grow-1 me-2">
+                                        <div class="item-title text-truncate-2">
+                                            {{ question.title }}
                                         </div>
-                                        <div class="question-preview-meta">
+                                        <div class="item-meta">
                                             <i class="fas fa-calendar-alt me-1"></i>
                                             {{ question.created_at|date:"d.m.Y" }}
-                                            <span class="mx-2">•</span>
+                                            <span class="mx-1">•</span>
                                             <i class="fas fa-eye me-1"></i>
-                                            {{ question.views }} просмотров
-                                            {% if question.category %}
-                                            <span class="mx-2">•</span>
-                                            <i class="fas fa-folder me-1"></i>
-                                            {{ question.category.name }}
-                                            {% endif %}
+                                            {{ question.views }}
                                         </div>
                                     </div>
-                                    <div class="ms-3">
+                                    <div class="ms-2">
                                         {% if question.has_answer %}
-                                        <span class="badge bg-success">
-                                            <i class="fas fa-check"></i>
-                                        </span>
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check"></i>
+                                            </span>
                                         {% else %}
-                                        <span class="badge bg-warning">
-                                            <i class="fas fa-clock"></i>
-                                        </span>
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-clock"></i>
+                                            </span>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -308,233 +415,80 @@
                 {% endif %}
             </div>
         </div>
-
-        <!-- Популярные вопросы -->
-        <div class="card feature-card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-fire me-2"></i>Популярные вопросы</span>
-                <a href="{% url 'qa_app:question_list' %}?sort=views" class="btn btn-sm btn-outline-primary">
-                    Все популярные <i class="fas fa-arrow-right ms-1"></i>
-                </a>
-            </div>
-            <div class="card-body">
-                {% if answered_questions %}
-                    <div class="list-group list-group-flush">
-                        {% for question in answered_questions|slice:":5" %}
-                            <a href="{% url 'qa_app:question_detail' pk=question.pk %}"
-                               class="list-group-item list-group-item-action border-0 question-preview">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="flex-grow-1">
-                                        <div class="question-preview-title">
-                                            {{ question.title|truncatechars:60 }}
-                                        </div>
-                                        <div class="question-preview-meta">
-                                            <i class="fas fa-eye me-1"></i>
-                                            {{ question.views }} просмотров
-                                            <span class="mx-2">•</span>
-                                            <i class="fas fa-check-circle me-1 text-success"></i>
-                                            Ответ от {{ question.updated_at|date:"d.m.Y" }}
-                                        </div>
-                                    </div>
-                                    <div class="ms-3 text-muted">
-                                        <small>{% with clean_text=question.answer|striptags %}{{ clean_text|truncatechars:50 }}{% endwith %}</small>
-                                    </div>
-                                </div>
-                            </a>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="empty-state">
-                        <i class="fas fa-chart-line"></i>
-                        <h4>Нет популярных вопросов</h4>
-                        <p class="mb-0">Здесь появятся вопросы с наибольшим количеством просмотров</p>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
     </div>
 
-    <!-- Правая колонка: Категории и теги -->
-    <div class="col-lg-4">
-        <!-- Категории -->
-        <div class="card feature-card mb-4">
+    <!-- Последние задачи -->
+    <div class="col-lg-6 mb-4">
+        <div class="card feature-card h-100">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-folder me-2"></i>Категории</span>
-                <a href="{% url 'qa_app:question_list' %}" class="btn btn-sm btn-outline-primary">
-                    Все <i class="fas fa-arrow-right ms-1"></i>
+                <span><i class="fas fa-tasks me-2"></i>Последние задачи</span>
+                <a href="{% url 'qa_app:task_list' %}" class="btn btn-sm btn-outline-primary">
+                    Все задачи <i class="fas fa-arrow-right ms-1"></i>
                 </a>
             </div>
             <div class="card-body">
-                {% if categories %}
+                {% if sidebar_recent_tasks %}
                     <div class="list-group list-group-flush">
-                        {% for category in categories|slice:":10" %}
-                            <a href="{% url 'qa_app:category_questions' slug=category.slug %}"
-                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center border-0 py-2">
-                                <div class="d-flex align-items-center">
-                                    <i class="fas fa-folder text-primary me-3"></i>
-                                    <div>
-                                        <div class="fw-medium">{{ category.name }}</div>
-                                        {% if category.description %}
-                                        <small class="text-muted">{{ category.description|truncatechars:40 }}</small>
+                        {% for task in sidebar_recent_tasks|slice:":8" %}
+                            <a href="{% url 'qa_app:task_detail' pk=task.pk %}"
+                               class="list-group-item list-group-item-action item-preview">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1 me-2">
+                                        <div class="item-title text-truncate-2">
+                                            {{ task.title }}
+                                        </div>
+                                        <div class="item-meta">
+                                            <i class="fas fa-user me-1"></i>
+                                            {{ task.author.username|default:task.author }}
+                                            <span class="mx-1">•</span>
+                                            <i class="fas fa-calendar-alt me-1"></i>
+                                            {{ task.created_at|date:"d.m.Y" }}
+                                        </div>
+                                    </div>
+                                    <div class="ms-2 d-flex flex-column gap-1">
+                                        {% if task.notes.count %}
+                                            <span class="badge bg-info">
+                                                {{ task.notes.count }}
+                                            </span>
+                                        {% endif %}
+                                        {% if task.attachedfile_set.count %}
+                                            <span class="badge bg-secondary">
+                                                {{ task.attachedfile_set.count }}
+                                            </span>
                                         {% endif %}
                                     </div>
                                 </div>
-                                <span class="badge bg-primary rounded-pill">
-                                    {{ category.question_count|default:0 }}
-                                </span>
                             </a>
                         {% endfor %}
-
-                        {% if categories|length > 10 %}
-                            <div class="text-center mt-3">
-                                <a href="{% url 'qa_app:question_list' %}" class="btn btn-sm btn-outline-secondary">
-                                    <i class="fas fa-ellipsis-h me-1"></i>
-                                    Показать все категории
-                                </a>
-                            </div>
-                        {% endif %}
                     </div>
                 {% else %}
                     <div class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <h4>Категорий нет</h4>
-                        <p class="mb-0">Категории пока не созданы</p>
+                        <i class="fas fa-tasks"></i>
+                        <h4>Задач пока нет</h4>
+                        <p class="mb-0">Создайте первую задачу для хранения инструкций и записей</p>
+                        <a href="{% url 'qa_app:task_create' %}" class="btn btn-primary mt-3">
+                            Создать задачу
+                        </a>
                     </div>
                 {% endif %}
-            </div>
-        </div>
-
-        <!-- Популярные теги -->
-        {% if popular_tags %}
-        <div class="card feature-card mb-4">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-tags me-2"></i>Популярные теги</h6>
-            </div>
-            <div class="card-body">
-                <div class="d-flex flex-wrap gap-2">
-                    {% for tag in popular_tags|slice:":15" %}
-                        <a href="{% url 'qa_app:search_questions' %}?query={{ tag.name|urlencode }}&search_in=tags"
-                           class="badge bg-light text-dark text-decoration-none border py-2 px-3 d-flex align-items-center"
-                           title="{{ tag.count }} вопросов">
-                            <i class="fas fa-tag me-2 text-primary"></i>
-                            {{ tag.name }}
-                            <span class="badge bg-secondary rounded-pill ms-2">{{ tag.count }}</span>
-                        </a>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Как это работает -->
-        <div class="card feature-card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Как это работает</h6>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-12">
-                        <div class="d-flex">
-                            <div class="flex-shrink-0">
-                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
-                                     style="width: 40px; height: 40px;">
-                                    <i class="fas fa-question"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-1">1. Задайте вопрос</h6>
-                                <p class="text-muted small mb-0">Опишите свою проблему подробно</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex">
-                            <div class="flex-shrink-0">
-                                <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center"
-                                     style="width: 40px; height: 40px;">
-                                    <i class="fas fa-comments"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-1">2. Получите ответы</h6>
-                                <p class="text-muted small mb-0">Сообщество экспертов поможет вам</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="d-flex">
-                            <div class="flex-shrink-0">
-                                <div class="rounded-circle bg-info text-white d-flex align-items-center justify-content-center"
-                                     style="width: 40px; height: 40px;">
-                                    <i class="fas fa-check-double"></i>
-                                </div>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6 class="mb-1">3. Найдите решение</h6>
-                                <p class="text-muted small mb-0">Выберите лучший ответ для вашей проблемы</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Призыв к действию -->
-<div class="card mt-5 border-primary">
-    <div class="card-body text-center py-5">
-        <h2 class="mb-3">Готовы найти ответы?</h2>
-        <p class="text-muted mb-4">Присоединяйтесь к нашему сообществу экспертов и разработчиков</p>
+<div class="card call-to-action border-primary">
+    <div class="card-body text-center py-4">
+        <h2 class="mb-3">Начните использовать систему знаний</h2>
+        <p class="text-muted mb-4">Создавайте вопросы, задачи и сохраняйте рабочие инструкции</p>
         <div class="d-flex justify-content-center gap-3 flex-wrap">
             <a href="{% url 'qa_app:create_question' %}" class="btn btn-primary btn-lg px-4">
-                <i class="fas fa-plus-circle me-2"></i>Задать вопрос
+                <i class="fas fa-plus-circle me-2"></i>Новый вопрос
             </a>
-            <a href="{% url 'qa_app:question_list' %}" class="btn btn-outline-primary btn-lg px-4">
-                <i class="fas fa-search me-2"></i>Искать ответы
+            <a href="{% url 'qa_app:task_create' %}" class="btn btn-outline-primary btn-lg px-4">
+                <i class="fas fa-tasks me-2"></i>Новая задача
             </a>
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Анимация при скролле
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('animate__animated', 'animate__fadeInUp');
-            }
-        });
-    }, observerOptions);
-
-    // Наблюдаем за карточками
-    document.querySelectorAll('.stat-card, .feature-card').forEach(card => {
-        observer.observe(card);
-    });
-
-    // Счетчик статистики (анимация)
-    const statNumbers = document.querySelectorAll('.stat-number');
-    statNumbers.forEach(number => {
-        const target = parseInt(number.textContent);
-        let current = 0;
-        const increment = target / 50;
-        const timer = setInterval(() => {
-            current += increment;
-            if (current >= target) {
-                current = target;
-                clearInterval(timer);
-            }
-            number.textContent = Math.floor(current);
-        }, 20);
-    });
-});
-</script>
 {% endblock %}

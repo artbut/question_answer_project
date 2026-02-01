@@ -81,6 +81,15 @@
                         </div>
                     </div>
 
+                    <!-- Привязка к задаче (если указано в URL) -->
+                    {% if request.GET.task %}
+                        <input type="hidden" name="task" value="{{ request.GET.task }}">
+                        <div class="alert alert-info mb-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Вопрос будет привязан к задаче №{{ request.GET.task }}
+                        </div>
+                    {% endif %}
+
                     <div class="alert alert-info">
                         <h6><i class="fas fa-lightbulb me-2"></i>Советы:</h6>
                         <ul class="mb-0">

@@ -1,6 +1,6 @@
 {% if user.is_staff %}
 <div class="modal fade" id="addAnswerModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title">
@@ -10,23 +10,39 @@
             </div>
             <form id="addAnswerForm">
                 <div class="modal-body">
+                    <!-- CKEditor для ввода ответа -->
                     <div class="mb-3">
                         <label class="form-label fw-bold">Ответ</label>
-                        <textarea class="form-control" id="answerContent" rows="10"
+                        <textarea class="form-control" id="answerContent" rows="8"
                                   placeholder="Введите подробный ответ..." required></textarea>
+                        <div id="addAnswerError" class="text-danger small mt-1 d-none"></div>
                     </div>
+
+                    <!-- Загрузка файлов -->
                     <div class="mb-3">
                         <label class="form-label fw-bold">
                             <i class="fas fa-paperclip me-1"></i>Прикрепить файлы
                         </label>
-                        <input type="file" class="form-control" id="answerFiles" multiple>
-                        <div class="form-text">Можно выбрать несколько файлов. Максимальный размер: 5MB</div>
+                        <input type="file" class="form-control" id="answerFiles" multiple
+                               accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.zip,.xls,.xlsx,.ppt,.pptx">
+                        <div class="form-text">
+                            Можно выбрать несколько файлов. Максимальный размер каждого: 10MB.
+                            Поддерживаемые форматы: PDF, DOC(X), TXT, изображения, ZIP, XLS, PPT.
+                        </div>
+                        <div id="answerFileError" class="text-danger small mt-1 d-none"></div>
                     </div>
-                    <div id="addAnswerError" class="alert alert-danger d-none"></div>
+
+                    <!-- Превью добавленных файлов -->
+                    <div id="answerFilesPreview" class="mt-3 d-none">
+                        <h6><i class="fas fa-paperclip me-2"></i>Выбранные файлы:</h6>
+                        <div class="row g-2" id="answerFilesList"></div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="submit" class="btn btn-success">Сохранить ответ</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-1"></i>Сохранить ответ
+                    </button>
                 </div>
             </form>
         </div>
@@ -34,33 +50,82 @@
 </div>
 
 <div class="modal fade" id="editAnswerModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
-            <div class="modal-header bg-warning">
+            <div class="modal-header bg-warning text-dark">
                 <h5 class="modal-title">
-                    <i class="fas fa-edit me-2"></i>Редактировать
+                    <i class="fas fa-edit me-2"></i>Редактировать ответ
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="editAnswerForm">
                 <div class="modal-body">
+                    <!-- CKEditor для редактирования ответа -->
                     <div class="mb-3">
                         <label class="form-label fw-bold">Ответ</label>
-                        <textarea class="form-control" id="editAnswerContent" rows="10" required>{{ question.answer|safe }}</textarea>
+                        <textarea class="form-control" id="editAnswerContent" rows="8" required>{{ question.answer|safe }}</textarea>
+                        <div id="editAnswerError" class="text-danger small mt-1 d-none"></div>
                     </div>
+
+                    <!-- Добавление новых файлов -->
                     <div class="mb-3">
                         <label class="form-label fw-bold">
-                            <i class="fas fa-paperclip me-1"></i>Добавить файлы
+                            <i class="fas fa-plus-circle me-1"></i>Добавить файлы
                         </label>
-                        <input type="file" class="form-control" id="editAnswerFiles" multiple>
-                        <div class="form-text">Можно выбрать несколько файлов. Максимальный размер: 5MB</div>
+                        <input type="file" class="form-control" id="editAnswerFiles" multiple
+                               accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.zip,.xls,.xlsx,.ppt,.pptx">
+                        <div class="form-text">
+                            Вы можете добавить новые файлы к ответу.
+                        </div>
+                        <div id="editFileError" class="text-danger small mt-1 d-none"></div>
                     </div>
-                    <div id="editAnswerError" class="alert alert-danger d-none"></div>
+
+                    <!-- Превью новых файлов -->
+                    <div id="editFilesPreview" class="mt-3 d-none">
+                        <h6><i class="fas fa-paperclip me-2"></i>Новые файлы:</h6>
+                        <div class="row g-2" id="editFilesList"></div>
+                    </div>
+
+                    <!-- Существующие файлы ответа -->
+                    {% if answer_files %}
+                    <div class="mb-4">
+                        <h6><i class="fas fa-folder-open me-2"></i>Файлы текущего ответа:</h6>
+                        <div class="row g-2">
+                            {% for file in answer_files %}
+                            <div class="col-md-6">
+                                <div class="card border-info h-100">
+                                    <div class="card-body d-flex align-items-center">
+                                        <i class="{{ file.get_file_icon }} fa-2x text-info me-3"></i>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">{{ file.name|truncatechars:25 }}</h6>
+                                            <small class="text-muted">{{ file.get_file_size }}</small>
+                                        </div>
+                                        <a href="{{ file.file.url }}" class="btn btn-sm btn-outline-primary" download>
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                        <form method="post" action="{% url 'qa_app:delete_file' file_id=file.id %}" class="d-inline ms-1">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Удалить этот файл?')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="button" class="btn btn-danger" id="deleteAnswerBtn">Удалить ответ</button>
-                    <button type="submit" class="btn btn-warning">Обновить</button>
+                    <button type="button" class="btn btn-danger" id="deleteAnswerBtn">
+                        <i class="fas fa-trash me-1"></i>Удалить ответ
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-sync-alt me-1"></i>Обновить ответ
+                    </button>
                 </div>
             </form>
         </div>
@@ -69,122 +134,218 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Добавление ответа
-    const addAnswerForm = document.getElementById('addAnswerForm');
-    if (addAnswerForm) {
-        addAnswerForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const answer = document.getElementById('answerContent').value;
-            const files = document.getElementById('answerFiles').files;
+    // Инициализация CKEditor для добавления ответа
+    initCKEditor('answerContent');
 
-            if (!answer.trim()) {
-                showError('addAnswerError', 'Ответ не может быть пустым');
+    // Инициализация CKEditor для редактирования ответа
+    initCKEditor('editAnswerContent');
+
+    // Превью выбранных файлов (добавление)
+    document.getElementById('answerFiles')?.addEventListener('change', function(e) {
+        updateFilesPreview(e.target.files, 'answerFilesList', 'answerFilesPreview');
+    });
+
+    // Превью выбранных файлов (редактирование)
+    document.getElementById('editAnswerFiles')?.addEventListener('change', function(e) {
+        updateFilesPreview(e.target.files, 'editFilesList', 'editFilesPreview');
+    });
+
+    // Функция инициализации CKEditor
+    function initCKEditor(elementId) {
+        const textarea = document.getElementById(elementId);
+        if (!textarea || typeof ClassicEditor === 'undefined') return;
+
+        ClassicEditor
+            .create(textarea, {
+                toolbar: [
+                    'heading', '|',
+                    'bold', 'italic', 'underline', 'strikethrough', '|',
+                    'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
+                    'alignment', '|',
+                    'bulletedList', 'numberedList', 'todoList', '|',
+                    'link', 'imageUpload', 'mediaEmbed', 'blockQuote', 'insertTable', '|',
+                    'undo', 'redo', 'sourceEditing'
+                ],
+                language: 'ru',
+                image: { toolbar: ['imageTextAlternative', 'toggleImageCaption'] },
+                table: { contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells'] }
+            })
+            .then(editor => {
+                window[`${elementId}Editor`] = editor;
+            })
+            .catch(error => {
+                console.error(`Ошибка инициализации CKEditor (${elementId}):`, error);
+            });
+    }
+
+    // Функция обновления превью файлов
+    function updateFilesPreview(files, listId, previewId) {
+        const list = document.getElementById(listId);
+        const preview = document.getElementById(previewId);
+        list.innerHTML = '';
+
+        if (files.length === 0) {
+            preview.classList.add('d-none');
+            return;
+        }
+
+        preview.classList.remove('d-none');
+
+        Array.from(files).forEach(file => {
+            const size = formatFileSize(file.size);
+            const icon = getFileIcon(file.name);
+
+            const col = document.createElement('div');
+            col.className = 'col-md-6';
+            col.innerHTML = `
+                <div class="alert alert-light d-flex align-items-center mb-2">
+                    <i class="${icon} me-3 text-secondary"></i>
+                    <div class="flex-grow-1">
+                        <div><strong>${file.name}</strong></div>
+                        <small class="text-muted">${size}</small>
+                    </div>
+                </div>
+            `;
+            list.appendChild(col);
+        });
+    }
+
+    // Форматирование размера файла
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Б';
+        const k = 1024;
+        const sizes = ['Б', 'КБ', 'МБ'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Получение иконки по расширению
+    function getFileIcon(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        const icons = {
+            'pdf': 'far fa-file-pdf',
+            'doc': 'far fa-file-word', 'docx': 'far fa-file-word',
+            'xls': 'far fa-file-excel', 'xlsx': 'far fa-file-excel',
+            'ppt': 'far fa-file-powerpoint', 'pptx': 'far fa-file-powerpoint',
+            'zip': 'far fa-file-archive', 'rar': 'far fa-file-archive',
+            'txt': 'far fa-file-alt',
+            'jpg': 'far fa-file-image', 'jpeg': 'far fa-file-image',
+            'png': 'far fa-file-image', 'gif': 'far fa-file-image'
+        };
+        return icons[ext] || 'far fa-file';
+    }
+
+    // Обработка формы добавления ответа
+    document.getElementById('addAnswerForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const editor = window.answerContentEditor;
+        const answer = editor ? editor.getData() : document.getElementById('answerContent').value;
+        const files = document.getElementById('answerFiles').files;
+        const errorDiv = document.getElementById('addAnswerError');
+
+        if (!answer.trim()) {
+            showError(errorDiv, 'Ответ не может быть пустым');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('answer', answer);
+        for (let i = 0; i < files.length; i++) {
+            if (files[i].size > 10 * 1024 * 1024) {
+                showError(document.getElementById('answerFileError'), `Файл "${files[i].name}" превышает 10MB`);
                 return;
             }
+            formData.append('attachments', files[i]);
+        }
 
-            const formData = new FormData();
-            formData.append('answer', answer);
-            for (let i = 0; i < files.length; i++) {
-                formData.append('attachments', files[i]);
+        submitAnswer("{% url 'qa_app:add_answer_ajax' pk=question.pk %}", formData, errorDiv);
+    });
+
+    // Обработка формы редактирования ответа
+    document.getElementById('editAnswerForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const editor = window.editAnswerContentEditor;
+        const answer = editor ? editor.getData() : document.getElementById('editAnswerContent').value;
+        const files = document.getElementById('editAnswerFiles').files;
+        const errorDiv = document.getElementById('editAnswerError');
+
+        if (!answer.trim()) {
+            showError(errorDiv, 'Ответ не может быть пустым');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('answer', answer);
+        for (let i = 0; i < files.length; i++) {
+            if (files[i].size > 10 * 1024 * 1024) {
+                showError(document.getElementById('editFileError'), `Файл "${files[i].name}" превышает 10MB`);
+                return;
             }
+            formData.append('attachments', files[i]);
+        }
 
+        submitAnswer("{% url 'qa_app:add_answer_ajax' pk=question.pk %}", formData, errorDiv);
+    });
+
+    // Удаление ответа
+    document.getElementById('deleteAnswerBtn')?.addEventListener('click', function() {
+        if (confirm('Вы уверены, что хотите удалить ответ? Это действие нельзя отменить.')) {
             fetch("{% url 'qa_app:add_answer_ajax' pk=question.pk %}", {
                 method: 'POST',
                 headers: {
+                    'Content-Type': 'application/json',
                     'X-CSRFToken': getCookie('csrftoken')
                 },
-                body: formData
+                body: JSON.stringify({
+                    answer: '',
+                    action: 'delete_answer'
+                })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     location.reload();
                 } else {
-                    showError('addAnswerError', data.error);
+                    alert(data.error || 'Не удалось удалить ответ');
                 }
             })
             .catch(error => {
-                showError('addAnswerError', 'Ошибка сети: ' + error);
+                console.error('Ошибка при удалении ответа:', error);
+                alert('Произошла ошибка сети');
             });
+        }
+    });
+
+    // Универсальная функция отправки ответа
+    function submitAnswer(url, formData, errorDiv) {
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                showError(errorDiv, data.error);
+            }
+        })
+        .catch(error => {
+            showError(errorDiv, 'Ошибка сети: ' + error.message);
         });
     }
 
-    // Редактирование ответа
-    const editAnswerForm = document.getElementById('editAnswerForm');
-    if (editAnswerForm) {
-        editAnswerForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const answer = document.getElementById('editAnswerContent').value;
-            const files = document.getElementById('editAnswerFiles').files;
-
-            if (!answer.trim()) {
-                showError('editAnswerError', 'Ответ не может быть пустым');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('answer', answer);
-            for (let i = 0; i < files.length; i++) {
-                formData.append('attachments', files[i]);
-            }
-
-            fetch("{% url 'qa_app:add_answer_ajax' pk=question.pk %}", {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    showError('editAnswerError', data.error);
-                }
-            });
-        });
-    }
-
-    // Удаление ответа — ИСПРАВЛЕНО: теперь отправляет правильный JSON
-    const deleteAnswerBtn = document.getElementById('deleteAnswerBtn');
-    if (deleteAnswerBtn) {
-        deleteAnswerBtn.addEventListener('click', function() {
-            if (confirm('Вы уверены, что хотите удалить ответ?')) {
-                fetch("{% url 'qa_app:add_answer_ajax' pk=question.pk %}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',  // ← Важно!
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({
-                        answer: '',  // Очищаем ответ
-                        action: 'delete_answer'  // Дополнительный флаг
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();  // Перезагружаем страницу
-                    } else {
-                        alert(data.error || 'Не удалось удалить ответ');
-                    }
-                })
-                .catch(error => {
-                    console.error('Ошибка при удалении ответа:', error);
-                    alert('Произошла ошибка сети');
-                });
-            }
-        });
-    }
-
-    function showError(elementId, message) {
-        const element = document.getElementById(elementId);
+    // Показ ошибки
+    function showError(element, message) {
         element.textContent = message;
         element.classList.remove('d-none');
         setTimeout(() => element.classList.add('d-none'), 5000);
     }
 
+    // Получение CSRF-токена
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {

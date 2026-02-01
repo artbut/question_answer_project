@@ -1,33 +1,34 @@
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">
-            <i class="fas fa-folder me-2"></i>Категории
-        </h5>
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-light border-0 d-flex align-items-center">
+        <i class="fas fa-folder me-2 text-primary"></i>
+        <h5 class="mb-0">Категории</h5>
     </div>
     <div class="card-body p-0">
         <div class="list-group list-group-flush">
+            <!-- Все категории -->
             <a href="{% url 'qa_app:question_list' %}"
-               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center
+               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-3
                       {% if not current_category %}active bg-primary text-white{% endif %}">
-                <div>
+                <div class="d-flex align-items-center">
                     <i class="fas fa-globe me-2"></i>
-                    <span>Все категории</span>
+                    <span>Все вопросы</span>
                 </div>
-                <span class="badge {% if not current_category %}bg-light text-primary{% else %}bg-primary text-white{% endif %} rounded-pill">
+                <span class="badge {% if not current_category %}bg-white text-primary{% else %}bg-light text-primary{% endif %} rounded-pill px-3 py-2">
                     {{ sidebar_question_count }}
                 </span>
             </a>
 
+            <!-- Список категорий -->
             {% for category in sidebar_categories %}
                 <a href="{% url 'qa_app:category_questions' slug=category.slug %}"
-                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center
+                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-3
                           {% if current_category.slug == category.slug %}active bg-primary text-white{% endif %}">
-                    <div>
+                    <div class="d-flex align-items-center">
                         <i class="fas fa-folder me-2"></i>
-                        <span>{{ category.name|truncatechars:20 }}</span>
+                        <span title="{{ category.name }}">{{ category.name|truncatechars:25 }}</span>
                     </div>
-                    <span class="badge {% if current_category.slug == category.slug %}bg-light text-primary{% else %}bg-primary text-white{% endif %} rounded-pill">
-                        {{ category.question_count }}
+                    <span class="badge {% if current_category.slug == category.slug %}bg-white text-primary{% else %}bg-light text-primary{% endif %} rounded-pill px-3 py-2">
+                        {{ category.question_count|default:0 }}
                     </span>
                 </a>
             {% empty %}
@@ -40,31 +41,31 @@
     </div>
 </div>
 
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">
-            <i class="fas fa-filter me-2"></i>Фильтр по ответам
-        </h5>
+<!-- Фильтр по статусу ответа -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-light border-0 d-flex align-items-center">
+        <i class="fas fa-filter me-2 text-success"></i>
+        <h5 class="mb-0">Фильтр по ответам</h5>
     </div>
     <div class="card-body p-0">
         <div class="list-group list-group-flush">
             <a href="?answered=yes{% if current_category %}&category={{ current_category.slug }}{% endif %}"
-               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                <div>
+               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-3">
+                <div class="d-flex align-items-center">
                     <i class="fas fa-check-circle text-success me-2"></i>
                     <span>С ответами</span>
                 </div>
-                <span class="badge bg-success text-white rounded-pill">
+                <span class="badge bg-success text-white rounded-pill px-3 py-2">
                     {{ sidebar_answered_count }}
                 </span>
             </a>
             <a href="?answered=no{% if current_category %}&category={{ current_category.slug }}{% endif %}"
-               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                <div>
-                    <i class="fas fa-question-circle text-warning me-2"></i>
+               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3 px-3">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-clock text-warning me-2"></i>
                     <span>Без ответов</span>
                 </div>
-                <span class="badge bg-warning text-dark rounded-pill">
+                <span class="badge bg-warning text-dark rounded-pill px-3 py-2">
                     {{ sidebar_unanswered_count }}
                 </span>
             </a>
@@ -72,21 +73,80 @@
     </div>
 </div>
 
+<!-- Популярные теги -->
 {% if sidebar_popular_tags %}
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">
-            <i class="fas fa-tags me-2"></i>Популярные теги
-        </h5>
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-light border-0 d-flex align-items-center">
+        <i class="fas fa-tags me-2 text-info"></i>
+        <h5 class="mb-0">Популярные теги</h5>
     </div>
     <div class="card-body">
         <div class="d-flex flex-wrap gap-2">
             {% for tag in sidebar_popular_tags %}
                 <a href="{% url 'qa_app:search_questions' %}?query={{ tag.name|urlencode }}&search_in=tags"
-                   class="badge bg-light text-dark text-decoration-none border">
-                    {{ tag.name }}
-                    <span class="badge bg-secondary rounded-pill ms-1">
+                   class="badge bg-light text-dark text-decoration-none border border-secondary-subtle"
+                   style="font-size: 0.8rem; padding: 0.4em 0.6em;"
+                   title="Найдено {{ tag.count }} вопросов">
+                    {{ tag.name|truncatechars:15 }}
+                    <span class="badge bg-secondary rounded-pill ms-1" style="font-size: 0.6rem; padding: 0.2em 0.3em;">
                         {{ tag.count }}
+                    </span>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Статистика задач -->
+{% if sidebar_total_tasks is not None %}
+<div class="card mb-4 shadow-sm">
+    <div class="card-header bg-light border-0 d-flex align-items-center">
+        <i class="fas fa-tasks me-2 text-info"></i>
+        <h5 class="mb-0">Задачи</h5>
+    </div>
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-muted">Всего задач:</span>
+            <span class="badge bg-info text-white rounded-pill px-3 py-2">{{ sidebar_total_tasks }}</span>
+        </div>
+
+        {% if sidebar_recent_tasks %}
+        <h6 class="text-muted mb-2">Последние:</h6>
+        <div class="list-group list-group-flush small">
+            {% for task in sidebar_recent_tasks %}
+            <a href="{% url 'qa_app:task_detail' pk=task.pk %}"
+               class="list-group-item list-group-item-action px-2 py-1"
+               title="{{ task.title }}">
+                <div class="d-flex justify-content-between">
+                    <span>{{ task.title|truncatechars:25 }}</span>
+                    <small class="text-muted">{{ task.created_at|date:"d.m" }}</small>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Популярные поисковые запросы -->
+{% if popular_searches %}
+<div class="card shadow-sm">
+    <div class="card-header bg-light border-0 d-flex align-items-center">
+        <i class="fas fa-fire me-2 text-danger"></i>
+        <h5 class="mb-0">Популярные запросы</h5>
+    </div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+            {% for search_term in popular_searches %}
+                <a href="{% url 'qa_app:search_questions' %}?query={{ search_term.term|urlencode }}"
+                   class="badge bg-light text-dark text-decoration-none border"
+                   style="font-size: 0.8rem; padding: 0.4em 0.6em;"
+                   title="Запрос использован {{ search_term.count }} раз">
+                    {{ search_term.term|truncatechars:18 }}
+                    <span class="badge bg-secondary rounded-pill ms-1" style="font-size: 0.6rem; padding: 0.2em 0.3em;">
+                        {{ search_term.count }}
                     </span>
                 </a>
             {% endfor %}

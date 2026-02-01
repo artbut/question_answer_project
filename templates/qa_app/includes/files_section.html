@@ -1,67 +1,199 @@
 {% load html_filters %}
 {% if files %}
-<div class="card mt-4">
-    <div class="card-header">
+<div class="card mt-4 shadow-sm">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
-            <i class="fas fa-paperclip me-2"></i>
-            Прикрепленные файлы {% if file_type == 'question' %}вопроса{% else %}ответа{% endif %} ({{ files|length }})
+            <i class="fas fa-paperclip me-2 text-primary"></i>
+            Прикрепленные файлы
+            {% if file_type == 'question' %}
+                вопроса ({{ files|length }})
+            {% elif file_type == 'answer' %}
+                ответа ({{ files|length }})
+            {% elif file_type == 'task' %}
+                задачи ({{ files|length }})
+            {% elif file_type == 'note' %}
+                записи ({{ files|length }})
+            {% else %}
+                ({{ files|length }})
+            {% endif %}
         </h5>
+        {% if total_size %}
+            <small class="text-muted">
+                Общий размер: {{ total_size|filesizeformat }}
+            </small>
+        {% endif %}
     </div>
-    <div class="card-body">
-        <div class="row">
-            {% for file in files %}
-                <div class="col-md-6 col-lg-4 mb-3">
-                    <div class="card file-card h-100">
-                        <div class="card-body">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50px;"></th>
+                        <th>Название файла</th>
+                        <th style="width: 120px;">Размер</th>
+                        <th style="width: 160px;">Дата загрузки</th>
+                        {% if file.uploaded_by %}<th style="width: 140px;">Загрузил</th>{% endif %}
+                        <th style="width: 180px;">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for file in files %}
+                    <tr class="align-middle">
+                        <td>
+                            <i class="{{ file.get_file_icon }} text-secondary"></i>
+                        </td>
+                        <td>
                             <div class="d-flex align-items-center">
-                                <div class="me-3">
-                                    <i class="{{ file.get_file_icon }} fa-2x"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1 text-truncate" title="{{ file.name }}">
-                                        {{ file.name|truncatechars:30 }}
-                                    </h6>
-                                    <small class="text-muted d-block">
-                                        <i class="fas fa-hdd me-1"></i>{{ file.get_file_size }}
-                                    </small>
-                                    <small class="text-muted d-block">
-                                        <i class="far fa-clock me-1"></i>{{ file.uploaded_at|date:"d.m.Y H:i" }}
-                                    </small>
-                                    {% if file_type == 'answer' and file.uploaded_by %}
-                                        <small class="text-muted d-block">
-                                            <i class="fas fa-user me-1"></i>{{ file.uploaded_by.username }}
-                                        </small>
-                                    {% endif %}
-                                </div>
+                                <span class="fw-medium" title="{{ file.name }}">
+                                    {{ file.name|truncatechars:40 }}
+                                </span>
                             </div>
-                        </div>
-                        <div class="card-footer bg-transparent border-top-0 pt-0">
-                            <div class="d-flex justify-content-between">
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ file.get_file_size }}</small>
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {{ file.uploaded_at|date:"d.m.Y H:i" }}
+                            </small>
+                        </td>
+                        {% if file.uploaded_by %}
+                        <td>
+                            <small>{{ file.uploaded_by.username }}</small>
+                        </td>
+                        {% endif %}
+                        <td>
+                            <div class="d-flex gap-1">
                                 <a href="{{ file.file.url }}"
                                    class="btn btn-sm btn-outline-primary"
                                    target="_blank"
-                                   download>
-                                    <i class="fas fa-download me-1"></i>Скачать
+                                   download
+                                   title="Скачать файл">
+                                    <i class="fas fa-download"></i>
                                 </a>
 
                                 {% if file|can_delete_file:request.user %}
-                                    <form method="post"
-                                          action="{% url 'qa_app:delete_file' file_id=file.id %}"
-                                          class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit"
-                                                class="btn btn-sm btn-outline-danger"
-                                                onclick="return confirm('Вы уверены, что хотите удалить этот файл?')">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
+                                <form method="post"
+                                      action="{% url 'qa_app:delete_file' file_id=file.id %}"
+                                      class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="btn btn-sm btn-outline-danger"
+                                            title="Удалить файл"
+                                            onclick="return confirm('Вы уверены, что хотите удалить этот файл?')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+
+                                <!-- Просмотр для изображений и PDF -->
+                                {% if file.is_image or file.is_pdf %}
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-info"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#filePreviewModal"
+                                        data-filename="{{ file.name }}"
+                                        data-fileurl="{{ file.file.url }}"
+                                        data-istype="{% if file.is_image %}image{% else %}pdf{% endif %}"
+                                        title="Просмотр">
+                                    <i class="fas fa-eye"></i>
+                                </button>
                                 {% endif %}
                             </div>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="100%" class="text-center py-3 text-muted">
+                            <i class="fas fa-paperclip me-1"></i>
+                            Нет прикрепленных файлов
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
+
+<!-- Модальное окно для просмотра файлов -->
+<div class="modal fade" id="filePreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filePreviewTitle">Просмотр файла</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" style="min-height: 400px;">
+                <div class="d-flex justify-content-center align-items-center h-100" id="previewLoading">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary mb-2" role="status"></div>
+                        <div class="text-muted small">Загрузка...</div>
+                    </div>
+                </div>
+                <img id="previewImage" class="img-fluid w-100 d-none" style="max-height: 70vh;" alt="Просмотр изображения">
+                <iframe id="previewPDF" class="w-100 d-none" style="height: 70vh; border: none;" title="Просмотр PDF"></iframe>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                <a id="downloadButton" href="#" class="btn btn-primary" target="_blank" download>
+                    <i class="fas fa-download me-1"></i>Скачать
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработчик модального окна просмотра файлов
+    const modal = document.getElementById('filePreviewModal');
+    if (modal) {
+        modal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const filename = button.getAttribute('data-filename');
+            const fileurl = button.getAttribute('data-fileurl');
+            const filetype = button.getAttribute('data-istype');
+
+            // Устанавливаем заголовок
+            document.getElementById('filePreviewTitle').textContent = filename;
+
+            // Устанавливаем ссылку на скачивание
+            const downloadBtn = document.getElementById('downloadButton');
+            downloadBtn.href = fileurl;
+
+            // Скрываем все контенты
+            document.getElementById('previewLoading').classList.remove('d-none');
+            document.getElementById('previewImage').classList.add('d-none');
+            document.getElementById('previewPDF').classList.add('d-none');
+
+            // Показываем нужный контент
+            if (filetype === 'image') {
+                const img = document.getElementById('previewImage');
+                img.src = fileurl;
+                img.onload = () => {
+                    document.getElementById('previewLoading').classList.add('d-none');
+                    img.classList.remove('d-none');
+                };
+                img.onerror = () => {
+                    document.getElementById('previewLoading').innerHTML = '<div class="text-danger">Ошибка загрузки изображения</div>';
+                };
+            } else if (filetype === 'pdf') {
+                const iframe = document.getElementById('previewPDF');
+                iframe.src = fileurl + '#zoom=85';
+                iframe.onload = () => {
+                    document.getElementById('previewLoading').classList.add('d-none');
+                    iframe.classList.remove('d-none');
+                };
+            }
+        });
+
+        // Очистка при закрытии модального окна
+        modal.addEventListener('hidden.bs.modal', function() {
+            document.getElementById('previewImage').src = '';
+            document.getElementById('previewPDF').src = '';
+        });
+    }
+});
+</script>
 {% endif %}
