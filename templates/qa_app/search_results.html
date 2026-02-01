@@ -1,40 +1,45 @@
 {% extends 'qa_app/base.html' %}
+{% load html_filters %}
 
 {% block title %}Результаты поиска{% endblock %}
 
 {% block content %}
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-lg-8">
         <h1 class="mb-4">Результаты поиска</h1>
 
+        <!-- Форма поиска -->
         <div class="card mb-4">
-            <div class="card-header">
-                <h5>Поиск</h5>
-            </div>
             <div class="card-body">
                 <form method="get" action="{% url 'qa_app:search_questions' %}">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <input type="text" class="form-control" name="query"
-                                   placeholder="Введите поисковый запрос..."
-                                   value="{{ query }}">
-                        </div>
-                        <div class="col-md-4">
-                            <button type="submit" class="btn btn-primary w-100">Искать</button>
-                        </div>
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="query"
+                               value="{{ query }}" placeholder="Что ищем?">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i> Искать
+                        </button>
                     </div>
-
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <small class="text-muted">Искать в:</small>
-                            {% for choice in form.search_in %}
-                                <div class="form-check form-check-inline">
-                                    {{ choice.tag }}
-                                    <label class="form-check-label" for="{{ choice.id_for_label }}">
-                                        {{ choice.choice_label }}
-                                    </label>
-                                </div>
-                            {% endfor %}
+                    <div class="mt-3">
+                        <small class="me-2">Искать в:</small>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="search_in"
+                                   value="all" id="search_all" {% if search_in == 'all' %}checked{% endif %}>
+                            <label class="form-check-label" for="search_all">Везде</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="search_in"
+                                   value="title" id="search_title" {% if search_in == 'title' %}checked{% endif %}>
+                            <label class="form-check-label" for="search_title">Заголовках</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="search_in"
+                                   value="content" id="search_content" {% if search_in == 'content' %}checked{% endif %}>
+                            <label class="form-check-label" for="search_content">Содержании</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="search_in"
+                                   value="tags" id="search_tags" {% if search_in == 'tags' %}checked{% endif %}>
+                            <label class="form-check-label" for="search_tags">Тегах</label>
                         </div>
                     </div>
                 </form>
@@ -42,20 +47,9 @@
                 {% if query %}
                     <div class="mt-3">
                         <p class="mb-0">
-                            Найдено вопросов: <strong>{{ page_obj.paginator.count }}</strong>
-                            {% if search_in and search_in != 'all' %}
-                                {% comment %} Получаем человекочитаемое название области поиска {% endcomment %}
-                                {% if search_in == 'title' %}
-                                    (в заголовках)
-                                {% elif search_in == 'content' %}
-                                    (в содержании)
-                                {% elif search_in == 'answer' %}
-                                    (в ответах)
-                                {% elif search_in == 'tags' %}
-                                    (в тегах)
-                                {% else %}
-                                    (всего)
-                                {% endif %}
+                            Найдено: <strong>{{ page_obj.paginator.count }}</strong> вопросов
+                            {% if search_in != 'all' %}
+                                (в {{ search_in }})
                             {% endif %}
                         </p>
                     </div>
@@ -63,26 +57,26 @@
             </div>
         </div>
 
+        <!-- Результаты -->
         {% if page_obj.object_list %}
             {% for question in page_obj.object_list %}
                 <div class="card mb-3">
                     <div class="card-body">
                         <h5 class="card-title">
-                            <a href="{% url 'qa_app:question_detail' pk=question.pk %}" class="text-decoration-none">
+                            <a href="{% url 'qa_app:question_detail' pk=question.pk %}"
+                               class="text-decoration-none">
                                 {{ question.title }}
                             </a>
                         </h5>
 
-                        <p class="card-text">
-                            {{ question.content|truncatechars:200 }}
+                        <p class="card-text text-muted">
+                            {{ question.content|striptags|truncatechars:250 }}
                         </p>
 
-                        {% if question.answer and query and query in question.answer %}
+                        {% if query and query|lower in question.answer|lower %}
                             <div class="alert alert-info py-2">
-                                <small>
-                                    <strong>Найдено в ответе:</strong>
-                                    {{ question.answer|truncatechars:150 }}
-                                </small>
+                                <strong>Найдено в ответе:</strong>
+                                {{ question.answer|striptags|truncatechars:150 }}
                             </div>
                         {% endif %}
 
@@ -92,11 +86,11 @@
                                     <span class="badge bg-secondary">{{ question.category.name }}</span>
                                 {% endif %}
                                 {% if question.has_answer %}
-                                    <span class="badge bg-success">Есть ответ</span>
+                                    <span class="badge bg-success">Ответ есть</span>
                                 {% endif %}
                             </div>
-                            <div class="text-muted">
-                                <small>{{ question.created_at|date:"d.m.Y" }}</small>
+                            <div class="text-muted small">
+                                {{ question.created_at|date:"d.m.Y" }}
                             </div>
                         </div>
                     </div>
@@ -105,7 +99,7 @@
 
             <!-- Пагинация -->
             {% if page_obj.has_other_pages %}
-                <nav aria-label="Page navigation">
+                <nav aria-label="Навигация по страницам">
                     <ul class="pagination justify-content-center">
                         {% if page_obj.has_previous %}
                             <li class="page-item">
@@ -145,18 +139,20 @@
 
         {% elif query %}
             <div class="alert alert-warning">
-                <h5>Ничего не найдено</h5>
-                <p>Попробуйте изменить поисковый запрос или выбрать другую область поиска.</p>
+                <h5><i class="fas fa-search me-2"></i>Ничего не найдено</h5>
+                <p>Попробуйте:</p>
                 <ul>
-                    <li>Проверьте правильность написания</li>
-                    <li>Используйте более общие ключевые слова</li>
-                    <li>Попробуйте поискать в других категориях</li>
+                    <li>Изменить поисковый запрос</li>
+                    <li>Использовать другие ключевые слова</li>
+                    <li>Проверить правильность написания</li>
+                    <li>Искать в другой категории</li>
                 </ul>
             </div>
         {% endif %}
     </div>
 
-    <div class="col-md-4">
+    <!-- Сайдбар -->
+    <div class="col-lg-4">
         {% include 'qa_app/includes/categories_sidebar.html' %}
     </div>
 </div>

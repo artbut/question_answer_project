@@ -1,10 +1,204 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
-</html>
+{% if user.is_staff %}
+<div class="modal fade" id="addAnswerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-reply me-2"></i>Добавить ответ
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addAnswerForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Ответ</label>
+                        <textarea class="form-control" id="answerContent" rows="10"
+                                  placeholder="Введите подробный ответ..." required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-paperclip me-1"></i>Прикрепить файлы
+                        </label>
+                        <input type="file" class="form-control" id="answerFiles" multiple>
+                        <div class="form-text">Можно выбрать несколько файлов. Максимальный размер: 5MB</div>
+                    </div>
+                    <div id="addAnswerError" class="alert alert-danger d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-success">Сохранить ответ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editAnswerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Редактировать
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editAnswerForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Ответ</label>
+                        <textarea class="form-control" id="editAnswerContent" rows="10" required>{{ question.answer|safe }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-paperclip me-1"></i>Добавить файлы
+                        </label>
+                        <input type="file" class="form-control" id="editAnswerFiles" multiple>
+                        <div class="form-text">Можно выбрать несколько файлов. Максимальный размер: 5MB</div>
+                    </div>
+                    <div id="editAnswerError" class="alert alert-danger d-none"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-danger" id="deleteAnswerBtn">Удалить ответ</button>
+                    <button type="submit" class="btn btn-warning">Обновить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Добавление ответа
+    const addAnswerForm = document.getElementById('addAnswerForm');
+    if (addAnswerForm) {
+        addAnswerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const answer = document.getElementById('answerContent').value;
+            const files = document.getElementById('answerFiles').files;
+
+            if (!answer.trim()) {
+                showError('addAnswerError', 'Ответ не может быть пустым');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('answer', answer);
+            for (let i = 0; i < files.length; i++) {
+                formData.append('attachments', files[i]);
+            }
+
+            fetch("{% url 'qa_app:add_answer_ajax' pk=question.pk %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    showError('addAnswerError', data.error);
+                }
+            })
+            .catch(error => {
+                showError('addAnswerError', 'Ошибка сети: ' + error);
+            });
+        });
+    }
+
+    // Редактирование ответа
+    const editAnswerForm = document.getElementById('editAnswerForm');
+    if (editAnswerForm) {
+        editAnswerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const answer = document.getElementById('editAnswerContent').value;
+            const files = document.getElementById('editAnswerFiles').files;
+
+            if (!answer.trim()) {
+                showError('editAnswerError', 'Ответ не может быть пустым');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('answer', answer);
+            for (let i = 0; i < files.length; i++) {
+                formData.append('attachments', files[i]);
+            }
+
+            fetch("{% url 'qa_app:add_answer_ajax' pk=question.pk %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    showError('editAnswerError', data.error);
+                }
+            });
+        });
+    }
+
+    // Удаление ответа — ИСПРАВЛЕНО: теперь отправляет правильный JSON
+    const deleteAnswerBtn = document.getElementById('deleteAnswerBtn');
+    if (deleteAnswerBtn) {
+        deleteAnswerBtn.addEventListener('click', function() {
+            if (confirm('Вы уверены, что хотите удалить ответ?')) {
+                fetch("{% url 'qa_app:add_answer_ajax' pk=question.pk %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',  // ← Важно!
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        answer: '',  // Очищаем ответ
+                        action: 'delete_answer'  // Дополнительный флаг
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();  // Перезагружаем страницу
+                    } else {
+                        alert(data.error || 'Не удалось удалить ответ');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при удалении ответа:', error);
+                    alert('Произошла ошибка сети');
+                });
+            }
+        });
+    }
+
+    function showError(elementId, message) {
+        const element = document.getElementById(elementId);
+        element.textContent = message;
+        element.classList.remove('d-none');
+        setTimeout(() => element.classList.add('d-none'), 5000);
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endif %}

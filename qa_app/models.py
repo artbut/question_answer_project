@@ -1,22 +1,54 @@
 from django.db import models
+from django.shortcuts import render
 from django.urls import reverse
-from django.utils import timezone
 from django.contrib.auth.models import User
+from django_ckeditor_5.fields import CKEditor5Field
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.core.exceptions import ValidationError
+from django.utils.html import strip_tags
+from pathlib import Path
 import os
+import bleach
 
 
-def question_file_path(instance, filename):
-    """Генерирует путь для файлов вопросов"""
-    return f'questions/question_{instance.question.id}/{filename}'
+# ----------------------------
+# Валидаторы
+# ----------------------------
+
+def validate_file_size(value):
+    limit = 5 * 1024 * 1024  # 5 MB
+    if value.size > limit:
+        raise ValidationError('Файл слишком большой. Максимум 5 МБ.')
 
 
-def answer_file_path(instance, filename):
-    """Генерирует путь для файлов ответов"""
-    return f'answers/question_{instance.question.id}/{filename}'
+def validate_file_type(value):
+    ext = Path(value.name).suffix.lower()
+    allowed = ['.pdf', '.docx', '.txt', '.jpg', '.jpeg', '.png', '.gif', '.zip', '.rar', '.xls', '.xlsx', '.ppt', '.pptx']
+    if ext not in allowed:
+        raise ValidationError(f'Тип файла {ext} не поддерживается.')
 
+
+# ----------------------------
+# Теги
+# ----------------------------
+
+class Tag(models.Model):
+    name = models.CharField(max_length=50, unique=True, verbose_name="Название тега")
+
+    class Meta:
+        verbose_name = "Тег"
+        verbose_name_plural = "Теги"
+
+    def __str__(self):
+        return self.name
+
+
+# ----------------------------
+# Категории
+# ----------------------------
 
 class Category(models.Model):
-    """Категория вопросов"""
     name = models.CharField(max_length=100, verbose_name="Название")
     slug = models.SlugField(max_length=100, unique=True, verbose_name="URL")
     description = models.TextField(blank=True, verbose_name="Описание")
@@ -33,11 +65,14 @@ class Category(models.Model):
         return reverse('qa_app:category_questions', kwargs={'slug': self.slug})
 
 
+# ----------------------------
+# Вопрос
+# ----------------------------
+
 class Question(models.Model):
-    """Вопрос"""
     title = models.CharField(max_length=200, verbose_name="Заголовок вопроса")
-    content = models.TextField(verbose_name="Содержание вопроса")
-    answer = models.TextField(verbose_name="Ответ", blank=True)
+    content = CKEditor5Field(config_name='extends', verbose_name="Содержание вопроса")
+    answer = CKEditor5Field(config_name='extends', verbose_name="Ответ", blank=True)
     category = models.ForeignKey(
         Category,
         on_delete=models.SET_NULL,
@@ -54,12 +89,7 @@ class Question(models.Model):
         null=True,
         verbose_name="Автор"
     )
-    tags = models.CharField(
-        max_length=200,
-        blank=True,
-        verbose_name="Теги (через запятую)",
-        help_text="Введите теги через запятую"
-    )
+    tags = models.ManyToManyField(Tag, blank=True, verbose_name="Теги")
     views = models.PositiveIntegerField(default=0, verbose_name="Просмотры")
 
     class Meta:
@@ -69,6 +99,9 @@ class Question(models.Model):
         indexes = [
             models.Index(fields=['-created_at']),
             models.Index(fields=['title']),
+            models.Index(fields=['category']),
+            models.Index(fields=['is_published', '-created_at']),
+            models.Index(fields=['category', 'is_published', '-created_at']),
         ]
 
     def __str__(self):
@@ -78,102 +111,65 @@ class Question(models.Model):
         return reverse('qa_app:question_detail', kwargs={'pk': self.pk})
 
     def increment_views(self):
-        """Увеличивает счетчик просмотров"""
         self.views += 1
         self.save(update_fields=['views'])
 
-    def get_tags_list(self):
-        """Возвращает список тегов"""
-        if self.tags:
-            return [tag.strip() for tag in self.tags.split(',')]
-        return []
-
     def has_answer(self):
-        """Проверяет, есть ли ответ"""
-        return bool(self.answer.strip())
+        if not self.answer:
+            return False
+        clean_text = strip_tags(self.answer).strip()
+        return bool(clean_text)
 
-    def get_files(self):
-        """Возвращает все файлы вопроса"""
-        return self.files.all()  # Используем related_name='files'
+    def clean(self):
+        """
+        Очищает HTML от потенциально опасных тегов и атрибутов.
+        Вызывается в форме через full_clean().
+        """
+        if self.content:
+            self.content = self.sanitize_html(self.content)
+        if self.answer:
+            self.answer = self.sanitize_html(self.answer)
 
-    def get_answer_files(self):
-        """Возвращает файлы ответа"""
-        return self.answer_files.all()  # Используем related_name='answer_files'
-
-
-class QuestionFile(models.Model):
-    """Файл, прикрепленный к вопросу"""
-    question = models.ForeignKey(
-        Question,
-        on_delete=models.CASCADE,
-        related_name='files',
-        verbose_name="Вопрос"
-    )
-    file = models.FileField(
-        upload_to=question_file_path,
-        verbose_name="Файл"
-    )
-    name = models.CharField(max_length=255, verbose_name="Название файла", blank=True)
-    uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата загрузки")
-
-    class Meta:
-        verbose_name = "Файл вопроса"
-        verbose_name_plural = "Файлы вопросов"
-        ordering = ['-uploaded_at']
-
-    def __str__(self):
-        return self.name or os.path.basename(self.file.name)
-
-    def save(self, *args, **kwargs):
-        if not self.name:
-            self.name = os.path.basename(self.file.name)
-        super().save(*args, **kwargs)
-
-    def get_file_icon(self):
-        """Возвращает иконку в зависимости от типа файла"""
-        ext = os.path.splitext(self.file.name)[1].lower()
-        icons = {
-            '.pdf': 'fas fa-file-pdf',
-            '.doc': 'fas fa-file-word',
-            '.docx': 'fas fa-file-word',
-            '.txt': 'fas fa-file-alt',
-            '.jpg': 'fas fa-file-image',
-            '.jpeg': 'fas fa-file-image',
-            '.png': 'fas fa-file-image',
-            '.gif': 'fas fa-file-image',
-            '.zip': 'fas fa-file-archive',
-            '.rar': 'fas fa-file-archive',
-            '.xls': 'fas fa-file-excel',
-            '.xlsx': 'fas fa-file-excel',
-            '.ppt': 'fas fa-file-powerpoint',
-            '.pptx': 'fas fa-file-powerpoint',
+    @staticmethod
+    def sanitize_html(html_content):
+        """
+        Очищает HTML с помощью bleach.
+        Разрешены только безопасные теги и атрибуты.
+        """
+        allowed_tags = [
+            'p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li',
+            'h1', 'h2', 'h3', 'a', 'img'
+        ]
+        allowed_attrs = {
+            'a': ['href', 'target'],
+            'img': ['src', 'alt', 'style'],
+            '*': ['style']  # осторожно: style может содержать JS!
         }
-        return icons.get(ext, 'fas fa-file')
-
-    def get_file_size(self):
-        """Возвращает размер файла в читаемом формате"""
-        try:
-            size = self.file.size
-            for unit in ['B', 'KB', 'MB', 'GB']:
-                if size < 1024.0:
-                    return f"{size:.1f} {unit}"
-                size /= 1024.0
-            return f"{size:.1f} TB"
-        except (ValueError, OSError):
-            return "Неизвестно"
+        # Удаляем потенциально опасные стили (например, expression, url(javascript:...))
+        cleaned = bleach.clean(html_content, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+        return cleaned
 
 
-class AnswerFile(models.Model):
-    """Файл, прикрепленный к ответу"""
-    question = models.ForeignKey(
-        Question,
-        on_delete=models.CASCADE,
-        related_name='answer_files',
-        verbose_name="Вопрос"
-    )
+# ----------------------------
+# Универсальный файл (вопрос или ответ)
+# ----------------------------
+
+def attachment_upload_path(instance, filename):
+    """Динамический путь: questions/question_<id>/ или answers/question_<id>/"""
+    folder = 'questions' if instance.content_type.model == 'question' else 'answers'
+    return f'{folder}/question_{instance.object_id}/{filename}'
+
+
+class AttachedFile(models.Model):
+    # Связь с объектом (вопрос или ответ)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+
     file = models.FileField(
-        upload_to=answer_file_path,
-        verbose_name="Файл"
+        upload_to=attachment_upload_path,
+        verbose_name="Файл",
+        validators=[validate_file_size, validate_file_type]
     )
     name = models.CharField(max_length=255, verbose_name="Название файла", blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата загрузки")
@@ -185,21 +181,20 @@ class AnswerFile(models.Model):
     )
 
     class Meta:
-        verbose_name = "Файл ответа"
-        verbose_name_plural = "Файлы ответов"
+        verbose_name = "Прикреплённый файл"
+        verbose_name_plural = "Прикреплённые файлы"
         ordering = ['-uploaded_at']
 
     def __str__(self):
-        return self.name or os.path.basename(self.file.name)
+        return self.name or Path(self.file.name).name
 
     def save(self, *args, **kwargs):
         if not self.name:
-            self.name = os.path.basename(self.file.name)
+            self.name = Path(self.file.name).name
         super().save(*args, **kwargs)
 
     def get_file_icon(self):
-        """Возвращает иконку в зависимости от типа файла"""
-        ext = os.path.splitext(self.file.name)[1].lower()
+        ext = Path(self.file.name).suffix.lower()
         icons = {
             '.pdf': 'fas fa-file-pdf text-danger',
             '.doc': 'fas fa-file-word text-primary',
@@ -219,7 +214,6 @@ class AnswerFile(models.Model):
         return icons.get(ext, 'fas fa-file text-muted')
 
     def get_file_size(self):
-        """Возвращает размер файла в читаемом формате"""
         try:
             size = self.file.size
             for unit in ['B', 'KB', 'MB', 'GB']:
@@ -227,5 +221,19 @@ class AnswerFile(models.Model):
                     return f"{size:.1f} {unit}"
                 size /= 1024.0
             return f"{size:.1f} TB"
-        except (ValueError, OSError):
+        except:
             return "Неизвестно"
+
+
+# ----------------------------
+# Сигнал: удаление файла с диска
+# ----------------------------
+
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+
+
+@receiver(post_delete, sender=AttachedFile)
+def delete_file_on_delete(sender, instance, **kwargs):
+    if instance.file and os.path.isfile(instance.file.path):
+        os.remove(instance.file.path)

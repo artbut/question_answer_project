@@ -1,213 +1,199 @@
 {% extends 'qa_app/base.html' %}
+{% load static %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Задать вопрос{% endblock %}
+
+{% block extra_head %}
+<!-- Подключаем CKEditor -->
+<script src="https://cdn.jsdelivr.net/npm/@ckeditor/ckeditor5-build-classic@41.1.0/build/ckeditor.js"></script>
+<style>
+.ck-editor__editable {
+    min-height: 300px;
+}
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-10">
+    <div class="col-lg-10">
         <div class="card">
-            <div class="card-header">
-                <h2 class="mb-0">{{ title }}</h2>
+            <div class="card-header bg-primary text-white">
+                <h2 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Задать новый вопрос</h2>
             </div>
             <div class="card-body">
-                <form method="post" enctype="multipart/form-data" id="questionForm">
+                <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
 
-                    {% for field in form %}
-                        <div class="mb-3">
-                            <label for="{{ field.id_for_label }}" class="form-label">
-                                {{ field.label }}
-                                {% if field.field.required %}
-                                    <span class="text-danger">*</span>
-                                {% endif %}
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">
+                            Заголовок вопроса <span class="text-danger">*</span>
+                        </label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger small">{{ form.title.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">Кратко сформулируйте суть вопроса</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.content.id_for_label }}" class="form-label">
+                            Подробное описание <span class="text-danger">*</span>
+                        </label>
+                        {{ form.content }}
+                        {% if form.content.errors %}
+                            <div class="text-danger small">{{ form.content.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.category.id_for_label }}" class="form-label">
+                                Категория
                             </label>
-                            {{ field }}
-                            {% if field.help_text %}
-                                <div class="form-text">{{ field.help_text }}</div>
-                            {% endif %}
-                            {% if field.errors %}
-                                <div class="alert alert-danger mt-1">
-                                    {{ field.errors }}
-                                </div>
+                            {{ form.category }}
+                            {% if form.category.errors %}
+                                <div class="text-danger small">{{ form.category.errors }}</div>
                             {% endif %}
                         </div>
-                    {% endfor %}
+                        <div class="col-md-6">
+                            <label for="{{ form.tags.id_for_label }}" class="form-label">
+                                Теги
+                            </label>
+                            {{ form.tags }}
+                            {% if form.tags.errors %}
+                                <div class="text-danger small">{{ form.tags.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">Укажите теги через запятую</div>
+                        </div>
+                    </div>
 
-                    <!-- Превью выбранных файлов -->
-                    <div class="mb-3" id="filePreviewContainer" style="display: none;">
-                        <label class="form-label">Выбранные файлы:</label>
-                        <div class="card">
-                            <div class="card-body">
-                                <ul id="filePreviewList" class="mb-0"></ul>
-                            </div>
+                    <div class="mb-4">
+                        <label for="{{ form.attachments.id_for_label }}" class="form-label">
+                            <i class="fas fa-paperclip me-1"></i>Прикрепить файлы
+                        </label>
+                        {{ form.attachments }}
+                        {% if form.attachments.errors %}
+                            <div class="text-danger small">{{ form.attachments.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">
+                            Можно выбрать несколько файлов. Максимальный размер каждого файла: 10MB.<br>
+                            Разрешенные форматы: PDF, DOC, DOCX, TXT, JPG, PNG, GIF, ZIP, XLS, PPT
                         </div>
                     </div>
 
                     <div class="alert alert-info">
-                        <h6><i class="fas fa-info-circle me-2"></i>Информация о файлах:</h6>
+                        <h6><i class="fas fa-lightbulb me-2"></i>Советы:</h6>
                         <ul class="mb-0">
-                            <li>Максимальный размер одного файла: 10MB</li>
-                            <li>Разрешенные форматы: PDF, DOC, DOCX, TXT, JPG, PNG, GIF, ZIP, RAR, XLS, XLSX, PPT, PPTX</li>
-                            <li>Можно прикрепить несколько файлов одновременно (удерживайте Ctrl/Cmd)</li>
-                            <li>Файлы будут доступны для скачивания всем пользователям</li>
+                            <li>Будьте конкретны и четко формулируйте проблему</li>
+                            <li>Опишите, что вы уже пробовали сделать</li>
+                            <li>Укажите версии ПО, если это важно</li>
+                            <li>Прикрепляйте скриншоты или документы при необходимости</li>
                         </ul>
                     </div>
 
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <a href="{% url 'qa_app:question_list' %}" class="btn btn-secondary me-md-2">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'qa_app:question_list' %}" class="btn btn-secondary">
                             <i class="fas fa-times me-1"></i>Отмена
                         </a>
-                        <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <button type="submit" class="btn btn-primary">
                             <i class="fas fa-paper-plane me-1"></i>Отправить вопрос
                         </button>
                     </div>
                 </form>
             </div>
         </div>
-
-        <div class="card mt-4">
-            <div class="card-body">
-                <h5><i class="fas fa-lightbulb me-2"></i>Советы по формулировке вопроса:</h5>
-                <ul>
-                    <li>Будьте конкретны и четко формулируйте проблему</li>
-                    <li>Опишите, что вы уже пробовали сделать</li>
-                    <li>Укажите версии используемого ПО, если это важно</li>
-                    <li>Используйте теги для облегчения поиска</li>
-                    <li>Прикрепляйте скриншоты или документы, если они помогут понять проблему</li>
-                </ul>
-            </div>
-        </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script>
+// Ждем загрузки DOM
 document.addEventListener('DOMContentLoaded', function() {
-    const attachmentsInput = document.querySelector('input[name="attachments"]');
-    const filePreviewContainer = document.getElementById('filePreviewContainer');
-    const filePreviewList = document.getElementById('filePreviewList');
-    const submitBtn = document.getElementById('submitBtn');
+    // Функция для инициализации CKEditor
+    function initCKEditor() {
+        const textarea = document.getElementById('id_content');
+        if (!textarea || typeof ClassicEditor === 'undefined') {
+            console.error('Не удалось найти textarea или CKEditor не загружен');
+            return;
+        }
 
-    if (attachmentsInput) {
-        attachmentsInput.addEventListener('change', function(e) {
-            const files = e.target.files;
-            filePreviewList.innerHTML = '';
-
-            if (files.length > 0) {
-                filePreviewContainer.style.display = 'block';
-
-                let totalSize = 0;
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    totalSize += file.size;
-
-                    const li = document.createElement('li');
-                    li.className = 'mb-2';
-
-                    // Определяем иконку по расширению
-                    const ext = file.name.split('.').pop().toLowerCase();
-                    let iconClass = 'fas fa-file';
-                    let iconColor = 'text-muted';
-
-                    if (['pdf'].includes(ext)) {
-                        iconClass = 'fas fa-file-pdf';
-                        iconColor = 'text-danger';
-                    } else if (['doc', 'docx'].includes(ext)) {
-                        iconClass = 'fas fa-file-word';
-                        iconColor = 'text-primary';
-                    } else if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
-                        iconClass = 'fas fa-file-image';
-                        iconColor = 'text-success';
-                    } else if (['zip', 'rar'].includes(ext)) {
-                        iconClass = 'fas fa-file-archive';
-                        iconColor = 'text-warning';
-                    } else if (['xls', 'xlsx'].includes(ext)) {
-                        iconClass = 'fas fa-file-excel';
-                        iconColor = 'text-success';
-                    } else if (['ppt', 'pptx'].includes(ext)) {
-                        iconClass = 'fas fa-file-powerpoint';
-                        iconColor = 'text-danger';
-                    } else if (ext === 'txt') {
-                        iconClass = 'fas fa-file-alt';
-                        iconColor = 'text-secondary';
-                    }
-
-                    li.innerHTML = `
-                        <div class="d-flex align-items-center">
-                            <i class="${iconClass} ${iconColor} me-2"></i>
-                            <span class="flex-grow-1">${file.name}</span>
-                            <span class="badge bg-secondary">${formatFileSize(file.size)}</span>
-                        </div>
-                    `;
-                    filePreviewList.appendChild(li);
+        // Конфигурация CKEditor
+        ClassicEditor
+            .create(textarea, {
+                toolbar: [
+                    'heading', '|',
+                    'bold', 'italic', 'underline', 'strikethrough', '|',
+                    'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
+                    'alignment', '|',
+                    'bulletedList', 'numberedList', 'todoList', '|',
+                    'link', 'imageUpload', 'mediaEmbed', 'blockQuote', 'insertTable', '|',
+                    'undo', 'redo', 'sourceEditing', '|',
+                    'code', 'codeBlock', 'horizontalLine', 'pageBreak'
+                ],
+                language: 'ru',
+                image: {
+                    toolbar: [
+                        'imageTextAlternative', 'toggleImageCaption',
+                        'imageStyle:inline', 'imageStyle:block', 'imageStyle:side'
+                    ]
+                },
+                table: {
+                    contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells']
                 }
+            })
+            .then(editor => {
+                console.log('CKEditor успешно инициализирован');
 
-                // Проверка общего размера
-                if (totalSize > 50 * 1024 * 1024) { // 50MB общий лимит
-                    const warning = document.createElement('li');
-                    warning.className = 'alert alert-warning mt-2';
-                    warning.innerHTML = `
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Общий размер файлов (${formatFileSize(totalSize)}) превышает рекомендуемый лимит 50MB.
-                        Рассмотрите возможность сжатия файлов или использования облачного хранилища.
-                    `;
-                    filePreviewList.appendChild(warning);
-                }
-            } else {
-                filePreviewContainer.style.display = 'none';
-            }
-        });
+                // Обновляем значение текстового поля при изменении контента
+                editor.model.document.on('change:data', () => {
+                    textarea.value = editor.getData();
+                });
+            })
+            .catch(error => {
+                console.error('Ошибка инициализации CKEditor:', error);
+                fallbackToTextarea();
+            });
     }
 
-    // Функция форматирования размера файла
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 B';
-        const k = 1024;
-        const sizes = ['B', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    // Резервный вариант - обычное текстовое поле
+    function fallbackToTextarea() {
+        const textarea = document.getElementById('id_content');
+        if (textarea) {
+            textarea.style.height = '400px';
+            textarea.classList.add('form-control');
+            textarea.placeholder = 'Введите текст вопроса...';
+
+            // Показываем предупреждение
+            const container = document.querySelector('.card-body');
+            if (container) {
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-warning mt-3';
+                alert.innerHTML = `
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Внимание!</strong> Редактор не загрузился. Используйте обычное текстовое поле.
+                `;
+                container.insertBefore(alert, container.firstChild);
+            }
+        }
     }
 
-    // Проверка формы перед отправкой
-    if (submitBtn) {
-        submitBtn.addEventListener('click', function(e) {
-            const attachmentsInput = document.querySelector('input[name="attachments"]');
-            if (attachmentsInput && attachmentsInput.files.length > 0) {
-                let hasOversizedFile = false;
-
-                for (let i = 0; i < attachmentsInput.files.length; i++) {
-                    const file = attachmentsInput.files[i];
-                    if (file.size > 10 * 1024 * 1024) { // 10MB
-                        hasOversizedFile = true;
-                        alert(`Файл "${file.name}" превышает лимит 10MB и не будет загружен.`);
-                    }
-                }
-
-                if (hasOversizedFile) {
-                    if (!confirm('Некоторые файлы превышают лимит 10MB и не будут загружены. Продолжить отправку?')) {
-                        e.preventDefault();
-                        return false;
-                    }
-                }
-            }
-            return true;
-        });
+    // Проверяем наличие CKEditor и инициализируем
+    if (typeof ClassicEditor !== 'undefined') {
+        initCKEditor();
+    } else {
+        // Пробуем загрузить CKEditor с CDN
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@ckeditor/ckeditor5-build-classic@41.1.0/build/ckeditor.js';
+        script.onload = function() {
+            setTimeout(initCKEditor, 300);
+        };
+        script.onerror = function() {
+            console.error('Не удалось загрузить CKEditor с CDN');
+            fallbackToTextarea();
+        };
+        document.head.appendChild(script);
     }
 });
 </script>
-
-<style>
-#filePreviewList {
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-#filePreviewList li {
-    padding: 8px;
-    border-bottom: 1px solid #eee;
-}
-
-#filePreviewList li:last-child {
-    border-bottom: none;
-}
-</style>
 {% endblock %}

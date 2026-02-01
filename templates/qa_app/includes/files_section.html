@@ -1,3 +1,4 @@
+{% load html_filters %}
 {% if files %}
 <div class="card mt-4">
     <div class="card-header">
@@ -43,13 +44,14 @@
                                     <i class="fas fa-download me-1"></i>Скачать
                                 </a>
 
-                                {% if file_type == 'question' and user == file.question.author or file_type == 'answer' and user == file.uploaded_by or user.is_staff %}
+                                {% if file|can_delete_file:request.user %}
                                     <form method="post"
-                                          action="{% url 'qa_app:delete_file' file_type=file_type file_id=file.id %}"
-                                          class="delete-file-form"
-                                          onsubmit="return confirm('Вы уверены, что хотите удалить этот файл?');">
+                                          action="{% url 'qa_app:delete_file' file_id=file.id %}"
+                                          class="d-inline">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <button type="submit"
+                                                class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('Вы уверены, что хотите удалить этот файл?')">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>

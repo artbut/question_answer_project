@@ -3,39 +3,58 @@ from django.db.models import Q, Count
 from django.core.paginator import Paginator
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView
 from django.views.generic import ListView, DetailView
 from django.urls import reverse
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 import os
-from .models import Question, Category, QuestionFile, AnswerFile
-from .forms import QuestionForm, AnswerForm, SearchForm
+from .models import Question, Category, AttachedFile, Tag
+from .forms import QuestionForm, AnswerForm, SearchForm, LoginForm
+from django.template.defaulttags import register
+from django.utils import timezone
+from django.db import models
+
+
+@register.filter
+def divisibleby(value, arg):
+    """Деление для шаблона"""
+    try:
+        return int(value) / int(arg) * 100
+    except (ValueError, ZeroDivisionError):
+        return 0
+
+
+@register.filter
+def multiply(value, arg):
+    """Умножание для шаблона"""
+    try:
+        return float(value) * float(arg)
+    except (ValueError, TypeError):
+        return 0
 
 
 def get_sidebar_context():
     """Получает контекст для сайдбара"""
-    # Получаем категории с количеством вопросов
     categories = Category.objects.annotate(
         question_count=Count('question', filter=Q(question__is_published=True))
     ).order_by('name')
 
-    # Статистика
     total_questions = Question.objects.filter(is_published=True).count()
     answered_count = Question.objects.filter(is_published=True).exclude(answer='').count()
     unanswered_count = total_questions - answered_count
 
     # Популярные теги
     questions_with_tags = Question.objects.filter(
-        is_published=True,
-        tags__isnull=False
-    ).exclude(tags='')
+        is_published=True
+    ).prefetch_related('tags')
 
     tag_counts = {}
     for question in questions_with_tags:
-        tags = [tag.strip() for tag in question.tags.split(',') if tag.strip()]
-        for tag in tags:
-            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+        for tag in question.tags.all():
+            tag_name = tag.name.lower().strip()
+            tag_counts[tag_name] = tag_counts.get(tag_name, 0) + 1
 
     popular_tags = sorted(
         [{'name': tag, 'count': count} for tag, count in tag_counts.items()],
@@ -52,7 +71,29 @@ def get_sidebar_context():
     }
 
 
-# Создайте миксин для добавления контекста сайдбара
+class CustomLoginView(LoginView):
+    template_name = 'qa_app/login.html'
+    authentication_form = LoginForm
+    redirect_authenticated_user = True
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(get_sidebar_context())
+        return context
+
+    def form_valid(self, form):
+        messages.success(self.request, f'Добро пожаловать, {form.get_user().username}!')
+        return super().form_valid(form)
+
+
+def logout_view(request):
+    from django.contrib.auth import logout
+    if request.user.is_authenticated:
+        messages.info(request, 'Вы успешно вышли из системы.')
+    logout(request)
+    return redirect('qa_app:home')
+
+
 class SidebarMixin:
     """Миксин для добавления контекста сайдбара"""
 
@@ -63,73 +104,49 @@ class SidebarMixin:
         return context
 
 
-# Главная страница
-def home(request):
-    """Главная страница"""
-    recent_questions = Question.objects.filter(
-        is_published=True
-    ).select_related('category').order_by('-created_at')[:5]
-
-    answered_questions = Question.objects.filter(
-        is_published=True
-    ).exclude(answer='').order_by('-created_at')[:5]
-
-    # Контекст сайдбара
-    sidebar_context = get_sidebar_context()
-
-    context = {
-        'recent_questions': recent_questions,
-        'answered_questions': answered_questions,
-        'form': SearchForm(),
-    }
-    context.update(sidebar_context)
-
-    return render(request, 'qa_app/home.html', context)
-
-
-# Список всех вопросов
 class QuestionListView(SidebarMixin, ListView):
-    """Список всех вопросов"""
     model = Question
     template_name = 'qa_app/question_list.html'
     context_object_name = 'questions'
-    paginate_by = 10
+    paginate_by = 12
 
     def get_queryset(self):
         queryset = Question.objects.filter(is_published=True).select_related('category')
 
-        # Фильтрация по категории
         category_slug = self.kwargs.get('slug')
         if category_slug:
-            category = get_object_or_404(Category, slug=category_slug)
-            queryset = queryset.filter(category=category)
+            try:
+                category = Category.objects.get(slug=category_slug)
+                queryset = queryset.filter(category=category)
+                self.current_category = category
+            except Category.DoesNotExist:
+                self.current_category = None
+        else:
+            self.current_category = None
 
-        # Сортировка
-        sort_by = self.request.GET.get('sort', '-created_at')
-        if sort_by in ['created_at', '-created_at', 'title', 'views']:
-            queryset = queryset.order_by(sort_by)
-
-        # Фильтрация по наличию ответа
         answered = self.request.GET.get('answered')
         if answered == 'yes':
             queryset = queryset.exclude(answer='')
         elif answered == 'no':
             queryset = queryset.filter(answer='')
 
+        sort_by = self.request.GET.get('sort', '-created_at')
+        if sort_by in ['created_at', '-created_at', 'title', '-title', 'views']:
+            queryset = queryset.order_by(sort_by)
+
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['current_category'] = self.kwargs.get('slug')
+        context['current_category'] = getattr(self, 'current_category', None)
         context['sort_by'] = self.request.GET.get('sort', '-created_at')
         context['answered_filter'] = self.request.GET.get('answered', '')
         context['form'] = SearchForm()
+        context['today'] = timezone.now()
         return context
 
 
-# Детальная страница вопроса
 class QuestionDetailView(SidebarMixin, DetailView):
-    """Детальная страница вопроса"""
     model = Question
     template_name = 'qa_app/question_detail.html'
     context_object_name = 'question'
@@ -140,11 +157,8 @@ class QuestionDetailView(SidebarMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         question = self.get_object()
-
-        # Увеличиваем счетчик просмотров
         question.increment_views()
 
-        # Похожие вопросы
         similar_questions = Question.objects.filter(
             is_published=True
         ).exclude(id=question.id)
@@ -156,10 +170,19 @@ class QuestionDetailView(SidebarMixin, DetailView):
 
         context['similar_questions'] = similar_questions
         context['form'] = SearchForm()
+
+        # Добавляем все прикреплённые файлы
+        context['attached_files'] = AttachedFile.objects.filter(
+            content_type__model='question',
+            object_id=question.pk
+        )
+
+        # Для удобства в шаблоне
+        context['today'] = timezone.now()
+
         return context
 
 
-# Создание нового вопроса
 @login_required
 def create_question(request):
     """Создание нового вопроса с файлами"""
@@ -170,31 +193,19 @@ def create_question(request):
             question.author = request.user
             question.save()
 
-            # Сохраняем прикрепленные файлы
             files = request.FILES.getlist('attachments')
             for file in files:
-                # Проверяем размер файла
-                if file.size > 10 * 1024 * 1024:  # 10MB
-                    messages.warning(request, f'Файл "{file.name}" превышает лимит 10MB и не был загружен')
-                    continue
-
-                QuestionFile.objects.create(
-                    question=question,
-                    file=file
+                AttachedFile.objects.create(
+                    content_object=question,
+                    file=file,
+                    uploaded_by=request.user
                 )
 
-            if files:
-                messages.success(request, f'Вопрос с {len(files)} файлом(ами) успешно добавлен!')
-            else:
-                messages.success(request, 'Ваш вопрос успешно добавлен!')
-
+            messages.success(request, 'Ваш вопрос успешно добавлен!')
             return redirect('qa_app:question_detail', pk=question.pk)
-        else:
-            messages.error(request, 'Пожалуйста, исправьте ошибки в форме.')
     else:
         form = QuestionForm()
 
-    # Добавляем контекст сайдбара
     sidebar_context = get_sidebar_context()
 
     return render(request, 'qa_app/question_form.html', {
@@ -204,9 +215,8 @@ def create_question(request):
     })
 
 
-# Поиск вопросов
 def search_questions(request):
-    """Поиск вопросов, включая поиск по файлам"""
+    """Поиск вопросов"""
     form = SearchForm(request.GET or None)
     questions = Question.objects.filter(is_published=True)
 
@@ -215,15 +225,13 @@ def search_questions(request):
         search_in = form.cleaned_data.get('search_in', 'all')
 
         if query:
-            # Создаем Q-объекты для поиска
             if search_in == 'all':
                 q_objects = (
                         Q(title__icontains=query) |
                         Q(content__icontains=query) |
                         Q(answer__icontains=query) |
-                        Q(tags__icontains=query) |
-                        Q(files__name__icontains=query) |
-                        Q(answer_files__name__icontains=query)
+                        Q(tags__name__icontains=query) |
+                        Q(attachedfile__name__icontains=query)
                 )
             elif search_in == 'title':
                 q_objects = Q(title__icontains=query)
@@ -232,20 +240,18 @@ def search_questions(request):
             elif search_in == 'answer':
                 q_objects = Q(answer__icontains=query)
             elif search_in == 'tags':
-                q_objects = Q(tags__icontains=query)
+                q_objects = Q(tags__name__icontains=query)
             elif search_in == 'files':
-                q_objects = Q(files__name__icontains=query) | Q(answer_files__name__icontains=query)
+                q_objects = Q(attachedfile__name__icontains=query)
             else:
                 q_objects = Q(title__icontains=query)
 
             questions = questions.filter(q_objects).distinct()
 
-    # Пагинация
     paginator = Paginator(questions.order_by('-created_at'), 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Добавляем контекст сайдбара
     sidebar_context = get_sidebar_context()
 
     return render(request, 'qa_app/search_results.html', {
@@ -258,100 +264,139 @@ def search_questions(request):
 
 
 @login_required
-def delete_file(request, file_type, file_id):
-    """Удаление файла"""
-    if file_type == 'question':
-        file_obj = get_object_or_404(QuestionFile, id=file_id)
-        # Проверяем права доступа
-        if not (request.user == file_obj.question.author or request.user.is_staff):
-            messages.error(request, 'У вас нет прав для удаления этого файла')
-            return redirect('qa_app:question_detail', pk=file_obj.question.pk)
-    elif file_type == 'answer':
-        file_obj = get_object_or_404(AnswerFile, id=file_id)
-        # Проверяем права доступа - используем file_obj.question вместо file_obj.answer
-        if not (request.user == file_obj.uploaded_by or request.user.is_staff):
-            messages.error(request, 'У вас нет прав для удаления этого файла')
-            return redirect('qa_app:question_detail', pk=file_obj.question.pk)  # Исправлено: file_obj.question.pk
-    else:
-        messages.error(request, 'Неверный тип файла')
-        return redirect('qa_app:home')
-
-    question_pk = file_obj.question.pk  # Исправлено: всегда используем file_obj.question.pk
-
-    if request.method == 'POST':
-        file_obj.delete()
-        messages.success(request, 'Файл успешно удален')
-
-    return redirect('qa_app:question_detail', pk=question_pk)
-
-
-# Добавление ответа
-@login_required
-def add_answer(request, pk):
-    """Редирект на страницу вопроса для использования модального окна"""
-    return redirect('qa_app:question_detail', pk=pk)
-
-
-@login_required
 @csrf_exempt
 def add_answer_ajax(request, pk):
-    """Добавление/редактирование ответа через AJAX с файлами"""
+    """Добавление/редактирование/удаление ответа через AJAX"""
     if not request.user.is_staff:
-        return JsonResponse({'success': False, 'error': 'Только администраторы могут добавлять ответы'})
+        return JsonResponse({'success': False, 'error': 'Только администраторы могут управлять ответами'})
 
-    if request.method == 'POST':
-        try:
-            # Получаем данные из формы
-            answer_text = request.POST.get('answer', '').strip()
-            files = request.FILES.getlist('attachments')
+    try:
+        question = Question.objects.get(pk=pk)
 
+        if request.method == 'POST':
+            # Проверяем, содержит ли запрос файлы (multipart/form-data)
+            if request.content_type.startswith('multipart/form-data'):
+                answer_text = request.POST.get('answer', '').strip()
+                action = request.POST.get('action')
+            else:
+                # Обычный JSON-запрос
+                try:
+                    body = request.body.decode('utf-8', errors='replace')
+                    data = json.loads(body)
+                    answer_text = data.get('answer', '').strip()
+                    action = data.get('action')
+                except json.JSONDecodeError:
+                    return JsonResponse({'success': False, 'error': 'Некорректные данные: ожидается JSON'})
+
+            # Если это удаление ответа
+            if action == 'delete_answer':
+                question.answer = ''
+                question.save()
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Ответ успешно удалён',
+                    'answer': '',
+                    'updated_at': question.updated_at.strftime('%d.%m.%Y %H:%M'),
+                })
+
+            # Обычное сохранение ответа
             if not answer_text:
                 return JsonResponse({'success': False, 'error': 'Ответ не может быть пустым'})
 
-            question = Question.objects.get(pk=pk)
             question.answer = answer_text
             question.save()
 
-            # Сохраняем файлы ответа с проверкой размера
-            valid_files = []
+            # Обработка вложений (если они есть)
+            files = request.FILES.getlist('attachments')
             for file in files:
-                if file.size > 10 * 1024 * 1024:  # 10MB
-                    continue  # Пропускаем слишком большие файлы
-
-                AnswerFile.objects.create(
-                    question=question,  # Исправлено: связываем с вопросом, а не с ответом
+                AttachedFile.objects.create(
+                    content_object=question,
                     file=file,
                     uploaded_by=request.user
                 )
-                valid_files.append(file.name)
 
-            # Получаем информацию о файлах
-            answer_files = []
-            for file_obj in question.answer_files.all():  # Используем related_name
-                answer_files.append({
-                    'id': file_obj.id,
-                    'name': file_obj.name,
-                    'url': file_obj.file.url,
-                    'icon': file_obj.get_file_icon(),
-                    'size': file_obj.get_file_size()
-                })
-
-            response_data = {
+            return JsonResponse({
                 'success': True,
-                'message': 'Ответ успешно сохранен',
+                'message': 'Ответ успешно сохранён',
                 'answer': question.answer,
                 'updated_at': question.updated_at.strftime('%d.%m.%Y %H:%M'),
-                'files': answer_files
-            }
+            })
 
-            if len(valid_files) < len(files):
-                response_data['warning'] = 'Некоторые файлы превышают лимит 10MB и не были загружены'
+        return JsonResponse({'success': False, 'error': 'Неверный метод запроса'})
 
-            return JsonResponse(response_data)
+    except Question.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Вопрос не найден'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
-        except Question.DoesNotExist:
-            return JsonResponse({'success': False, 'error': 'Вопрос не найден'})
+
+@login_required
+def delete_file(request, file_id):
+    file_obj = get_object_or_404(AttachedFile, id=file_id)
+    content_object = file_obj.content_object
+
+    # Проверка прав
+    can_delete = (
+        (hasattr(content_object, 'author') and content_object.author == request.user) or
+        (file_obj.uploaded_by == request.user) or
+        request.user.is_staff
+    )
+    if not can_delete:
+        messages.error(request, "Нет прав на удаление.")
+        return redirect('qa_app:home')
+
+    redirect_url = content_object.get_absolute_url()
+
+    if request.method == "POST":
+        file_path = None
+        if file_obj.file:
+            file_path = file_obj.file.path
+
+        try:
+            file_obj.delete()  # Удаление объекта → должен сработа сигнал
+
+            # Дополнительно: если файл остался — удаляем вручную
+            if file_path and os.path.isfile(file_path):
+                os.remove(file_path)
+                print(f"📁 Ручное удаление файла: {file_path}")
+
+            messages.success(request, "Файл успешно удалён.")
         except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
+            messages.error(request, f"Ошибка: {str(e)}")
+            print(f"❌ Ошибка при удалении: {e}")
 
-    return JsonResponse({'success': False, 'error': 'Неверный метод запроса'})
+    return redirect(redirect_url)
+
+
+def home(request):
+    # Последние вопросы
+    recent_questions = Question.objects.filter(is_published=True)\
+                                    .select_related('author', 'category')\
+                                    .prefetch_related('tags')[:6]
+
+    # Популярные (с ответами и высоким количеством просмотров)
+    answered_questions = Question.objects.filter(
+        is_published=True,
+        answer__isnull=False
+    ).exclude(answer__exact='')\
+     .order_by('-views')[:6]
+
+    # Категории
+    categories = Category.objects.annotate(
+        question_count=models.Count('question', filter=models.Q(question__is_published=True))
+    ).order_by('name')
+
+    # Статистика
+    total_questions = Question.objects.filter(is_published=True).count()
+    answered_count = answered_questions.count()
+
+    context = {
+        'recent_questions': recent_questions,
+        'answered_questions': answered_questions,
+        'categories': categories,
+        'question_count': total_questions,
+        'answered_count': answered_count,
+        'popular_tags': Tag.objects.all()[:10],  # пример
+    }
+
+    return render(request, 'qa_app/home.html', context)
